@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * The Cohort Portal palette
+ *   Sage #9FAE8C · Moss #6F7E5B · Bark #34402A · Cream #F3EEDB · Fog #EFEAD6
+ * Values below are HSL (consumed via hsl(var(--token))).
+ */
+@layer base {
+  :root {
+    --background: 42 42% 89%; /* deeper warm cream page — more separation */
+    --foreground: 95 28% 16%; /* deeper bark ink — stronger contrast */
+    --card: 46 60% 98%; /* crisp near-white, clearly lifts off the page */
+    --card-foreground: 95 28% 16%;
+    --popover: 46 60% 98%;
+    --popover-foreground: 95 28% 16%;
+    --primary: 88 34% 38%; /* richer, more saturated moss-green */
+    --primary-foreground: 47 55% 96%;
+    --secondary: 84 30% 84%; /* livelier sage */
+    --secondary-foreground: 95 28% 18%;
+    --muted: 44 34% 87%;
+    --muted-foreground: 92 14% 36%;
+    --accent: 84 36% 82%; /* sage hover — more chroma */
+    --accent-foreground: 95 28% 18%;
+    --destructive: 12 71% 50%; /* vermillion rust — vivid */
+    --destructive-foreground: 47 55% 97%;
+    --border: 44 26% 79%;
+    --input: 44 26% 79%;
+    --ring: 88 40% 40%; /* green focus */
+    --radius: 0.7rem;
+  }
+
+  .dark {
+    --background: 95 22% 11%; /* deep bark */
+    --foreground: 47 48% 91%; /* Cream */
+    --card: 93 21% 16%;
+    --card-foreground: 47 48% 91%;
+    --popover: 93 21% 15%;
+    --popover-foreground: 47 48% 91%;
+    --primary: 86 17% 62%; /* Sage pops on dark */
+    --primary-foreground: 93 24% 14%; /* Bark text on sage */
+    --secondary: 93 15% 24%;
+    --secondary-foreground: 47 48% 91%;
+    --muted: 93 13% 22%;
+    --muted-foreground: 86 18% 70%;
+    --accent: 93 15% 27%;
+    --accent-foreground: 47 48% 91%;
+    --destructive: 12 57% 35%; /* rust.strong */
+    --destructive-foreground: 47 50% 94%;
+    --border: 93 14% 28%;
+    --input: 93 14% 28%;
+    --ring: 86 17% 62%; /* Sage focus */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Animated brand gradient text (pair with `animate-shimmer` in markup). */
+  .text-gradient {
+    background-image: linear-gradient(100deg, #7fb53b, #5ea62b, #f2b01e, #5ea62b, #7fb53b);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Light variant for gradient text on dark (bark) backgrounds. */
+  .text-gradient-light {
+    background-image: linear-gradient(100deg, #b8c4a8, #f3eedb, #9fae8c, #f3eedb, #b8c4a8);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* highlight.js: keep code blocks on brand bark; use only the token colours. */
+  .hljs {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* Faint dot grid used behind the landing page. */
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(159, 174, 140, 0.28) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Paper grain — a whisper of SVG noise for warm, non-flat surfaces. */
+  .texture-grain {
+    position: relative;
+  }
+  .texture-grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.20 0 0 0 0 0.25 0 0 0 0 0.16 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Staggered page-load reveal: children rise in sequence (landing language). */
+  .stagger-children > * {
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0.03s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.09s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.21s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.27s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.33s; }
+  .stagger-children > *:nth-child(7) { animation-delay: 0.39s; }
+  .stagger-children > *:nth-child(8) { animation-delay: 0.45s; }
+  .stagger-children > *:nth-child(n + 9) { animation-delay: 0.5s; }
+}
+
+/* Respect the OS "reduce motion" setting: soften all animation/transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,685 @@
+// LMS Login & Registration — data model.
+// See PROJECT.md §4 for the narrative description and rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Supabase: pooled connection (Supavisor, port 6543, ?pgbouncer=true) for the
+  // app runtime; direct/session-pooler connection (port 5432) for migrations.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum University {
+  GUC
+  GIU
+}
+
+/// Account lifecycle. Each state maps to a DISTINCT login behaviour — see
+/// src/lib/auth/account-state.ts. Never collapse these into a boolean.
+enum AccountState {
+  PENDING_EMAIL_VERIFICATION
+  PENDING_ADMIN_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+  DEACTIVATED
+}
+
+enum AuditEvent {
+  LOGIN
+  LOGOUT
+  SESSION_REVOKED
+  PASSWORD_RESET
+  PASSWORD_CHANGED
+  EMAIL_VERIFIED
+  ACCOUNT_APPROVED
+  ACCOUNT_REJECTED
+  ACCOUNT_SUSPENDED
+  ACCOUNT_REACTIVATED
+  COURSE_ACCESS_GRANTED
+  COURSE_ACCESS_REVOKED
+}
+
+// ---------------------------------------------------------------------------
+// Instructor — the "admin". Seeded / CLI-created; never self-registers.
+// Every Student and Course references an instructor, so nothing hardcodes
+// "there is exactly one admin".
+// ---------------------------------------------------------------------------
+
+model Instructor {
+  id                String   @id @default(cuid())
+  name              String
+  email             String   @unique
+  passwordHash      String
+  requiresTwoFactor Boolean  @default(false) // 2FA seam — no logic yet
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  students Student[]
+  courses  Course[]
+  session  Session? // polymorphic — an instructor also gets a single session
+
+  // Phase 2
+  announcements     Announcement[]
+  feedbackSnippets  FeedbackSnippet[]
+  gradedSubmissions Submission[]
+  grantedUnlocks    StudentModuleUnlock[]
+
+  @@map("instructors")
+}
+
+// ---------------------------------------------------------------------------
+// Student — the self-registering account.
+// ---------------------------------------------------------------------------
+
+model Student {
+  id                String       @id @default(cuid())
+  username          String       @unique
+  email             String       @unique
+  university        University
+  passwordHash      String
+  fullName          String? // shown on certificates; falls back to username
+  state             AccountState @default(PENDING_EMAIL_VERIFICATION)
+  rejectionReason   String? // set when state = REJECTED (optional reason)
+  emailVerifiedAt   DateTime?
+  requiresTwoFactor Boolean      @default(false) // 2FA seam — no logic yet
+
+  // Phase 2 — engagement / at-risk tracking
+  lastLearningActivityAt DateTime?
+
+  // Login throttling
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  // Multi-tenancy: always non-null. Assigned at registration (see
+  // src/lib/instructor.ts:getDefaultInstructor).
+  instructorId String
+  instructor   Instructor @relation(fields: [instructorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courseAccess        StudentCourseAccess[]
+  session             Session?
+  verificationTokens  VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+
+  // Phase 2
+  lessonProgress      LessonProgress[]
+  quizAttempts        QuizAttempt[]
+  submissions         Submission[]
+  notes               LessonNote[]
+  bookmarks           Bookmark[]
+  certificates        Certificate[]
+  announcementReads   AnnouncementRead[]
+  moduleUnlocks       StudentModuleUnlock[]
+  streak              StudentStreak?
+  activity            StudentActivity[]
+  assignmentReminders AssignmentReminder[]
+
+  @@index([instructorId])
+  @@index([state])
+  @@map("students")
+}
+
+// ---------------------------------------------------------------------------
+// Course — belongs to an instructor.
+// ---------------------------------------------------------------------------
+
+model Course {
+  id           String      @id @default(cuid())
+  title        String
+  description  String?
+  university   University? // optional course<->university association
+  gatingEnabled Boolean    @default(true) // per-course toggle for sequential gating
+  instructorId String
+  instructor   Instructor  @relation(fields: [instructorId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  access StudentCourseAccess[]
+
+  // Phase 2
+  modules       Module[]
+  announcements Announcement[]
+  certificates  Certificate[]
+
+  @@index([instructorId])
+  @@map("courses")
+}
+
+// ---------------------------------------------------------------------------
+// StudentCourseAccess — explicit grant of a course to a student.
+// Students only ever see courses they appear here for.
+// ---------------------------------------------------------------------------
+
+model StudentCourseAccess {
+  id        String   @id @default(cuid())
+  studentId String
+  courseId  String
+  grantedAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@index([courseId])
+  @@map("student_course_access")
+}
+
+// ---------------------------------------------------------------------------
+// Session — server-side, opaque, single per account (strict single-session).
+// Exactly one of studentId / instructorId is set. The unique constraints on
+// each enforce "one active session per account".
+// ---------------------------------------------------------------------------
+
+model Session {
+  id           String   @id @default(cuid())
+  tokenHash    String   @unique // sha256 of the cookie token; raw token never stored
+  studentId    String?  @unique
+  instructorId String?  @unique
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  student    Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instructor Instructor? @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Verification & reset tokens — separate, single-use, expiring. Only the hash
+// is stored; the raw token lives only in the emailed link.
+// ---------------------------------------------------------------------------
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId])
+  @@map("password_reset_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// AuditLog — every login attempt (+ other security events). studentId is
+// nullable so a failed login for an unknown email doesn't leak existence.
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id             String     @id @default(cuid())
+  event          AuditEvent
+  success        Boolean
+  ip             String?
+  userAgent      String?
+  emailAttempted String? // what the user typed; recorded even when no student matched
+  message        String?
+  studentId      String?
+  student        Student?   @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  createdAt      DateTime   @default(now())
+
+  @@index([studentId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ===========================================================================
+// PHASE 2 — Courses & Content. See PROJECT.md "Phase 2" for narrative/decisions.
+// ===========================================================================
+
+enum LessonType {
+  VIDEO
+  DOCUMENT
+  RICH_TEXT
+  QUIZ
+  ASSIGNMENT
+}
+
+enum VideoStatus {
+  PENDING
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum QuizQuestionType {
+  MCQ
+  TRUE_FALSE
+  SHORT_ANSWER
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED // auto-graded parts done; may await manual grading
+  GRADED
+}
+
+enum SubmissionMode {
+  CODE
+  FILE
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED // graded; visible to student once releasedAt is set
+}
+
+enum ProgressStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AnnouncementScope {
+  GLOBAL
+  COURSE
+}
+
+// --- Structure -------------------------------------------------------------
+
+model Module {
+  id          String    @id @default(cuid())
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  orderIndex  Int       @default(0)
+  isPublished Boolean   @default(false)
+  publishAt   DateTime? // optional scheduled publish
+
+  // Gating: unlocks when the prerequisite module's gating assignment is passed.
+  // Null = no prerequisite (open).
+  prerequisiteModuleId String?
+  prerequisite         Module?  @relation("ModulePrereq", fields: [prerequisiteModuleId], references: [id])
+  dependents           Module[] @relation("ModulePrereq")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items   LessonItem[]
+  unlocks StudentModuleUnlock[]
+
+  @@index([courseId])
+  @@map("modules")
+}
+
+model LessonItem {
+  id          String     @id @default(cuid())
+  moduleId    String
+  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  type        LessonType
+  title       String
+  orderIndex  Int        @default(0)
+  isPublished Boolean    @default(false)
+  publishAt   DateTime?
+  body        String? // RICH_TEXT payload (markdown); null for other types
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Type-specific payloads (exactly one is set, matching `type`).
+  video      Video?
+  documentId String?    @unique
+  document   FileAsset? @relation("DocumentFile", fields: [documentId], references: [id])
+  quiz       Quiz?
+  assignment Assignment?
+
+  progress  LessonProgress[]
+  notes     LessonNote[]
+  bookmarks Bookmark[]
+
+  @@index([moduleId])
+  @@map("lesson_items")
+}
+
+// Provider-agnostic video record. See src/lib/video/*.
+model Video {
+  id              String      @id @default(cuid())
+  lessonItemId    String      @unique
+  lessonItem      LessonItem  @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+  provider        String      @default("local")
+  providerAssetId String? // id/key the provider uses
+  storageKey      String? // local provider: object key
+  status          VideoStatus @default(READY)
+  durationSeconds Int?
+  originalFilename String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("videos")
+}
+
+// Generic uploaded file (documents, submission files, announcement images).
+model FileAsset {
+  id         String   @id @default(cuid())
+  provider   String   @default("local")
+  storageKey String // key/path within the provider
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  documentFor   LessonItem?    @relation("DocumentFile")
+  submissions   Submission[]
+  announcements Announcement[]
+
+  @@map("file_assets")
+}
+
+// --- Quizzes (practice/tracking only) --------------------------------------
+
+model Quiz {
+  id               String     @id @default(cuid())
+  lessonItemId     String     @unique
+  lessonItem       LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+  instructions     String?
+  opensAt          DateTime?
+  closesAt         DateTime?
+  timeLimitMinutes Int?
+  maxAttempts      Int? // null = unlimited
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id          String           @id @default(cuid())
+  quizId      String
+  quiz        Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  orderIndex  Int              @default(0)
+  type        QuizQuestionType
+  prompt      String
+  options     Json? // MCQ options (array of strings)
+  correct     Json? // MCQ: index/indices; TRUE_FALSE: bool; SHORT_ANSWER: null
+  points      Int              @default(1)
+  explanation String?
+  createdAt   DateTime         @default(now())
+
+  answers QuizAnswer[]
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id                 String        @id @default(cuid())
+  quizId             String
+  quiz               Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId          String
+  student            Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attemptNo          Int           @default(1)
+  status             AttemptStatus @default(IN_PROGRESS)
+  startedAt          DateTime      @default(now())
+  submittedAt        DateTime?
+  score              Int? // awarded points
+  maxScore           Int?
+  needsManualGrading Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+
+  answers QuizAnswer[]
+
+  @@index([quizId])
+  @@index([studentId])
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id               String       @id @default(cuid())
+  attemptId        String
+  attempt          QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  response         Json?
+  isCorrect        Boolean?
+  awardedPoints    Int?
+  needsManualGrade Boolean      @default(false)
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
+  @@map("quiz_answers")
+}
+
+// --- Assignments -----------------------------------------------------------
+
+model Assignment {
+  id             String         @id @default(cuid())
+  lessonItemId   String         @unique
+  lessonItem     LessonItem     @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+  instructions   String?
+  dueAt          DateTime?
+  isGating       Boolean        @default(false)
+  submissionMode SubmissionMode @default(FILE)
+  codeLanguage   String? // default language hint for CODE mode
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  submissions Submission[]
+  reminders   AssignmentReminder[]
+
+  @@map("assignments")
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attemptNo    Int              @default(1)
+  submittedAt  DateTime         @default(now())
+  isLate       Boolean          @default(false)
+  mode         SubmissionMode
+  codeContent  String?
+  codeLanguage String?
+  fileAssetId  String?
+  fileAsset    FileAsset?       @relation(fields: [fileAssetId], references: [id])
+  status       SubmissionStatus @default(SUBMITTED)
+  passed       Boolean? // set on grading; gating unlocks on true
+  score        Int? // optional numeric, tracking-only
+  feedback     String?
+  gradedAt     DateTime?
+  gradedById   String?
+  gradedBy     Instructor?      @relation(fields: [gradedById], references: [id])
+  releasedAt   DateTime? // when grade+feedback becomes visible to the student
+
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([status])
+  @@map("submissions")
+}
+
+// Reusable feedback text the admin can insert then edit per submission.
+model FeedbackSnippet {
+  id           String     @id @default(cuid())
+  instructorId String
+  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  title        String
+  body         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([instructorId])
+  @@map("feedback_snippets")
+}
+
+// Dedupe record for the automatic ~24h-before due-date reminder.
+model AssignmentReminder {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sentAt       DateTime   @default(now())
+
+  @@unique([assignmentId, studentId])
+  @@map("assignment_reminders")
+}
+
+// --- Progression overrides -------------------------------------------------
+
+model StudentModuleUnlock {
+  id          String      @id @default(cuid())
+  studentId   String
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  moduleId    String
+  module      Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  grantedById String?
+  grantedBy   Instructor? @relation(fields: [grantedById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@unique([studentId, moduleId])
+  @@index([moduleId])
+  @@map("student_module_unlocks")
+}
+
+// --- Progress / engagement -------------------------------------------------
+
+model LessonProgress {
+  id                  String         @id @default(cuid())
+  studentId           String
+  student             Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonItemId        String
+  lessonItem          LessonItem     @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+  status              ProgressStatus @default(IN_PROGRESS)
+  watchedPercent      Int            @default(0) // video: max % watched
+  lastPositionSeconds Int            @default(0) // video resume point
+  completedAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([studentId, lessonItemId])
+  @@index([lessonItemId])
+  @@map("lesson_progress")
+}
+
+model LessonNote {
+  id           String     @id @default(cuid())
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonItemId String
+  lessonItem   LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+  body         String     @default("")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([studentId, lessonItemId])
+  @@map("lesson_notes")
+}
+
+model Bookmark {
+  id               String     @id @default(cuid())
+  studentId        String
+  student          Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonItemId     String
+  lessonItem       LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+  timestampSeconds Int? // for a specific point within a video
+  label            String?
+  createdAt        DateTime   @default(now())
+
+  @@index([studentId])
+  @@index([lessonItemId])
+  @@map("bookmarks")
+}
+
+model StudentStreak {
+  studentId      String    @id
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime? // UTC-midnight semantics
+  updatedAt      DateTime  @updatedAt
+
+  @@map("student_streaks")
+}
+
+model StudentActivity {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date      DateTime // UTC midnight of an active day
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, date])
+  @@map("student_activity")
+}
+
+model Certificate {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  serial    String   @unique
+  issuedAt  DateTime @default(now())
+
+  @@unique([studentId, courseId])
+  @@map("certificates")
+}
+
+// --- Announcements ---------------------------------------------------------
+
+model Announcement {
+  id           String            @id @default(cuid())
+  instructorId String
+  instructor   Instructor        @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  scope        AnnouncementScope @default(COURSE)
+  courseId     String? // null for GLOBAL
+  course       Course?           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  body         String // limited formatting (bold, links)
+  imageAssetId String?
+  imageAsset   FileAsset?        @relation(fields: [imageAssetId], references: [id])
+  publishAt    DateTime? // scheduled send; null = immediate
+  sentAt       DateTime? // when email notifications were dispatched
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  reads AnnouncementRead[]
+
+  @@index([courseId])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, studentId])
+  @@index([studentId])
+  @@map("announcement_reads")
+}
