@@ -833,6 +833,52 @@ re-implemented over the iframe. It wasn't. The PDF viewer's watermark is untouch
 Protection is now Bunny's rather than ours: expiring signed embeds, referrer/domain allowlisting
 (configured on the library, not in env), and the player's download control.
 
+## 5o. Production email — Resend
+
+`EMAIL_PROVIDER` now defaults to **`resend` in production** and `console` in development. An
+explicit value still wins, so `console` remains usable under `NODE_ENV=production` for local
+`next start` smoke tests. Boot **fails loudly** if the selected provider's credential is missing
+(`resend` without `RESEND_API_KEY`, `smtp` without `SMTP_HOST`) — email verification is step one of
+every signup, so a silent drop is worse than a crash. The same guard now covers
+`VIDEO_PROVIDER=bunny` and `STORAGE_PROVIDER=supabase`.
+
+### Do not ship Gmail SMTP
+
+The local `.env` currently uses `smtp.gmail.com` with a `@gmail.com` From address. That is fine for
+testing and wrong for production:
+
+- free Gmail caps around **500 sends/day** and throttles bursts;
+- the From address is `@gmail.com`, so **SPF/DKIM cannot be aligned to your own domain** — which is
+  precisely what inbox providers check, so verification mail lands in spam far more often;
+- it is a personal mailbox, not a transactional sender, so there's no bounce/complaint handling.
+
+A `RESEND_API_KEY` is already present in `.env`. Switching is: verify a domain, change
+`EMAIL_FROM` to an address on it, set `EMAIL_PROVIDER="resend"`.
+
+### DNS records to publish
+
+Resend generates the exact values per-domain in its dashboard — **use those, not a copied example**,
+especially the DKIM key. Resend recommends a dedicated sending subdomain (`send.yourdomain.com`)
+rather than the apex. What it will ask for:
+
+| Purpose | Type | Host | Value |
+| ------- | ---- | ---- | ----- |
+| Return path / bounces | `MX` | `send.yourdomain.com` | `feedback-smtp.<region>.amazonses.com` (priority 10) |
+| SPF | `TXT` | `send.yourdomain.com` | `v=spf1 include:amazonses.com ~all` |
+| DKIM | `TXT` | `resend._domainkey` | long `p=…` public key, **generated per domain** |
+| DMARC | `TXT` | `_dmarc` | `v=DMARC1; p=none; rua=mailto:you@yourdomain.com` |
+
+Notes that will save an afternoon:
+
+- **Domains added from ~August 2026 onward may be issued CNAME records instead of TXT.** Follow
+  whatever the dashboard shows for *your* domain; don't force the older format.
+- All MX records for the domain must point at the **same AWS region**.
+- DMARC is **not** required to verify or to send. Get MX + SPF + DKIM green first, *then* publish
+  DMARC starting at `p=none` (monitor only) and tighten to `quarantine`/`reject` later. Starting at
+  `p=reject` before alignment is confirmed will bounce your own mail.
+- **Lead time:** DNS propagation plus a warm-up period. Publish the records and send a low volume
+  for about a week before launch so you aren't a cold sender on day one.
+
 ## 6. Decisions Log
 
 | Date       | Decision / Change                                                                 | Reason |

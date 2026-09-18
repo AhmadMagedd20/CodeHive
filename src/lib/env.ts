@@ -26,7 +26,13 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(16, "SESSION_SECRET must be at least 16 chars"),
   APP_URL: z.string().url().default("http://localhost:3000"),
 
-  EMAIL_PROVIDER: z.enum(["console", "smtp", "resend"]).default("console"),
+  // Defaults to `resend` in production and `console` in development, so a
+  // deploy can't silently console-log its verification emails and leave
+  // nobody able to register. An explicit value always wins — `console` stays
+  // available under NODE_ENV=production for local `next start` smoke tests.
+  EMAIL_PROVIDER: z
+    .enum(["console", "smtp", "resend"])
+    .default(process.env.NODE_ENV === "production" ? "resend" : "console"),
   EMAIL_FROM: z.string().default("The Cohort Portal <no-reply@example.com>"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: int(587),
@@ -73,7 +79,43 @@ const schema = z.object({
   // app runs normally and just skips them. See lib/telegram.
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHAT_ID: z.string().optional(),
-});
+})
+  // Fail at boot rather than at the first student registration: an email
+  // provider without its credential drops mail silently from the caller's
+  // point of view, and email verification is step one of every signup.
+  .superRefine((v, ctx) => {
+    if (v.EMAIL_PROVIDER === "resend" && !v.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["RESEND_API_KEY"],
+        message: "EMAIL_PROVIDER=resend requires RESEND_API_KEY",
+      });
+    }
+    if (v.EMAIL_PROVIDER === "smtp" && !v.SMTP_HOST) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["SMTP_HOST"],
+        message: "EMAIL_PROVIDER=smtp requires SMTP_HOST",
+      });
+    }
+    if (v.VIDEO_PROVIDER === "bunny" && (!v.BUNNY_STREAM_LIBRARY_ID || !v.BUNNY_STREAM_API_KEY)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["BUNNY_STREAM_API_KEY"],
+        message: "VIDEO_PROVIDER=bunny requires BUNNY_STREAM_LIBRARY_ID and BUNNY_STREAM_API_KEY",
+      });
+    }
+    if (
+      v.STORAGE_PROVIDER === "supabase" &&
+      (!v.SUPABASE_URL || !v.SUPABASE_SERVICE_ROLE_KEY)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["SUPABASE_SERVICE_ROLE_KEY"],
+        message: "STORAGE_PROVIDER=supabase requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
+      });
+    }
+  });
 
 function loadEnv() {
   const parsed = schema.safeParse(process.env);
