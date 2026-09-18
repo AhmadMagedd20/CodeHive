@@ -144,7 +144,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await prisma.purchase.create({
+  try {
+    await prisma.purchase.create({
     data: {
       studentId: student.id,
       courseId: course.id,
@@ -161,7 +162,29 @@ export async function POST(req: NextRequest) {
       screenshotAssetId: asset.id,
       status: "PENDING",
     },
-  });
+    });
+  } catch (e) {
+    // The partial unique index (migration `purchase_pending_unique`) is the
+    // real guard — the read-then-write check above can be raced by a
+    // double-tap or a retry on a slow connection. Losing that race is not an
+    // error from the student's point of view: their payment IS under review,
+    // so say exactly that rather than showing a failure.
+    if (
+      e && typeof e === "object" && "code" in e &&
+      (e as { code?: string }).code === "P2002"
+    ) {
+      return NextResponse.json(
+        {
+          error: mod
+            ? "You already have a payment under review for this week"
+            : "You already have a payment under review for this course",
+          pending: true,
+        },
+        { status: 409 },
+      );
+    }
+    throw e;
+  }
 
   // Student confirmation (unchanged) …
   await sendEmail(
