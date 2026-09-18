@@ -6,7 +6,7 @@ import { requireInstructor } from "@/lib/auth/current-user";
 import { revokeAllStudentSessions } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { sendEmail } from "@/lib/email";
-import { approvedEmail, rejectedEmail, courseAccessEmail } from "@/lib/email/templates";
+import { approvedEmail, courseAccessEmail } from "@/lib/email/templates";
 
 /**
  * Admin (instructor) actions. Every one:
@@ -20,40 +20,10 @@ async function ownStudent(instructorId: string, studentId: string) {
   return prisma.student.findFirst({ where: { id: studentId, instructorId } });
 }
 
-export async function approveStudentAction(formData: FormData) {
-  const instructor = await requireInstructor();
-  const studentId = String(formData.get("studentId"));
-  const student = await ownStudent(instructor.id, studentId);
-  if (!student || student.state !== "PENDING_ADMIN_APPROVAL") return;
-
-  await prisma.student.update({ where: { id: student.id }, data: { state: "ACTIVE" } });
-  await audit({ event: "ACCOUNT_APPROVED", success: true, studentId: student.id });
-  await sendEmail(approvedEmail(student.email));
-  revalidatePath("/admin");
-  revalidatePath("/admin/students");
-}
-
-export async function rejectStudentAction(formData: FormData) {
-  const instructor = await requireInstructor();
-  const studentId = String(formData.get("studentId"));
-  const reason = String(formData.get("reason") ?? "").trim() || null;
-  const student = await ownStudent(instructor.id, studentId);
-  if (!student || student.state !== "PENDING_ADMIN_APPROVAL") return;
-
-  await prisma.student.update({
-    where: { id: student.id },
-    data: { state: "REJECTED", rejectionReason: reason },
-  });
-  await audit({
-    event: "ACCOUNT_REJECTED",
-    success: true,
-    studentId: student.id,
-    message: reason ?? undefined,
-  });
-  await sendEmail(rejectedEmail(student.email, reason ?? undefined));
-  revalidatePath("/admin");
-  revalidatePath("/admin/students");
-}
+// `approveStudentAction` / `rejectStudentAction` used to live here. Manual
+// approval was removed when email verification started activating accounts
+// directly, leaving both unreachable — nothing rendered them and their own
+// guards (`state !== "PENDING_ADMIN_APPROVAL"`) could never pass. Deleted.
 
 export async function suspendStudentAction(formData: FormData) {
   const instructor = await requireInstructor();

@@ -37,6 +37,10 @@ export function gateForState(state: AccountState, rejectionReason?: string | nul
         canResendVerification: true,
       };
 
+    // DEPRECATED and unreachable: verification activates accounts directly.
+    // Kept because the value still exists in the Postgres enum — removing an
+    // enum value means recreating the type, which is a needless risk on a live
+    // database. Any historical row in this state still gets a sane message.
     case AccountState.PENDING_ADMIN_APPROVAL:
       return {
         allowed: false,

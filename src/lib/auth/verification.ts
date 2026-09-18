@@ -31,10 +31,11 @@ export type VerifyResult =
   | { ok: false; reason: "invalid" | "expired" };
 
 /**
- * Consume a verification token. Advances the student from
- * PENDING_EMAIL_VERIFICATION to PENDING_ADMIN_APPROVAL. Idempotent-ish: a
- * second click on a consumed link for an already-verified account reports
- * alreadyVerified rather than an error.
+ * Consume a verification token. A confirmed email is enough to activate, so
+ * this advances the student from PENDING_EMAIL_VERIFICATION straight to
+ * ACTIVE — there is no manual approval step. Idempotent-ish: a second click on
+ * a consumed link for an already-verified account reports alreadyVerified
+ * rather than an error.
  */
 export async function consumeVerificationToken(rawToken: string): Promise<VerifyResult> {
   const record = await prisma.verificationToken.findUnique({
