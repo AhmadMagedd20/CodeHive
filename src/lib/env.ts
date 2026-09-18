@@ -48,7 +48,13 @@ const schema = z.object({
   TWO_FACTOR_ENABLED: bool(false),
 
   // --- Phase 2: content, media, scheduling ---------------------------------
-  VIDEO_PROVIDER: z.enum(["local"]).default("local"),
+  // `local` = dev only (disk + <video>). `bunny` = production (browser-direct
+  // TUS upload, iframe playback). See lib/video/bunny.ts.
+  VIDEO_PROVIDER: z.enum(["local", "bunny"]).default("local"),
+  BUNNY_STREAM_LIBRARY_ID: z.string().optional(),
+  BUNNY_STREAM_API_KEY: z.string().optional(),
+  /** Enables expiring embed links. Optional: without it, embeds are unsigned. */
+  BUNNY_STREAM_TOKEN_KEY: z.string().optional(),
   STORAGE_PROVIDER: z.enum(["local", "supabase"]).default("local"),
   STORAGE_DIR: z.string().default("./storage"), // local provider root (dev)
   // Supabase Storage adapter (only needed when STORAGE_PROVIDER=supabase)
@@ -60,6 +66,13 @@ const schema = z.object({
   CRON_SECRET: z.string().optional(),
   AT_RISK_INACTIVE_DAYS: int(7),
   ASSIGNMENT_REMINDER_HOURS: int(24),
+
+  // --- Admin Telegram alerts (optional) ------------------------------------
+  // A second notification channel for the INSTRUCTOR only (student emails are
+  // unchanged). Both must be set for alerts to send; if either is missing the
+  // app runs normally and just skips them. See lib/telegram.
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHAT_ID: z.string().optional(),
 });
 
 function loadEnv() {

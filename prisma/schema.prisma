@@ -63,6 +63,29 @@ model Instructor {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // Self-serve purchase settings (InstaPay) — editable in admin settings.
+  instapayHandle       String?
+  instapayInstructions String?
+  instapayQrAssetId    String?
+  instapayQr           FileAsset? @relation("InstapayQr", fields: [instapayQrAssetId], references: [id])
+
+  // Phase 4 — when on, marking a manual-drip student "Attended" for week N also
+  // releases the Nth module to them. Off by default (attendance & release stay
+  // separate unless the instructor opts in).
+  attendanceAutoRelease Boolean @default(false)
+
+  // Landing-page hero preview video — a PUBLIC marketing asset, deliberately
+  // NOT a Video/LessonItem: no course, no gating, no watermark or download
+  // protection. Uploaded through the same VideoProvider for storage mechanics
+  // only. Null across the board = the hero falls back to its static mock.
+  heroVideoProvider   String?
+  heroVideoAssetId    String? // provider handle (local provider: the storage key)
+  heroVideoStorageKey String?
+  heroVideoStatus     VideoStatus?
+  heroVideoFilename   String?
+  heroPosterAssetId   String?
+  heroPoster          FileAsset? @relation("HeroPoster", fields: [heroPosterAssetId], references: [id])
+
   students Student[]
   courses  Course[]
   session  Session? // polymorphic — an instructor also gets a single session
@@ -72,6 +95,14 @@ model Instructor {
   feedbackSnippets  FeedbackSnippet[]
   gradedSubmissions Submission[]
   grantedUnlocks    StudentModuleUnlock[]
+
+  // Purchase path
+  reviewedPurchases Purchase[]
+
+  // Phase 4 — in-person roster / drip / attendance
+  rosterEntries     RosterEntry[]
+  moduleReleases    StudentModuleRelease[]
+  attendanceRecords AttendanceRecord[]
 
   @@map("instructors")
 }
@@ -91,6 +122,10 @@ model Student {
   rejectionReason   String? // set when state = REJECTED (optional reason)
   emailVerifiedAt   DateTime?
   requiresTwoFactor Boolean      @default(false) // 2FA seam — no logic yet
+
+  // Phase 4 — set true when the account registered with an instructor's code.
+  // Drives in-person pricing (private 40% discount) and code auto-approval.
+  isInPerson Boolean @default(false)
 
   // Phase 2 — engagement / at-risk tracking
   lastLearningActivityAt DateTime?
@@ -125,10 +160,34 @@ model Student {
   streak              StudentStreak?
   activity            StudentActivity[]
   assignmentReminders AssignmentReminder[]
+  purchases           Purchase[]
+  moduleAccess        StudentModuleAccess[]
+
+  // Phase 4
+  rosterEntry    RosterEntry?
+  moduleReleases StudentModuleRelease[]
+  attendance     AttendanceRecord[]
+
+  savedCourses SavedCourse[]
 
   @@index([instructorId])
   @@index([state])
   @@map("students")
+}
+
+// Course-level bookmark ("save this course") — distinct from the per-lesson
+// Bookmark model. Toggled from course cards.
+model SavedCourse {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId])
+  @@index([courseId])
+  @@map("saved_courses")
 }
 
 // ---------------------------------------------------------------------------
@@ -139,8 +198,18 @@ model Course {
   id           String      @id @default(cuid())
   title        String
   description  String?
+  category     String? // subject tag shown on cards + used by the dashboard filter pills
   university   University? // optional course<->university association
   gatingEnabled Boolean    @default(true) // per-course toggle for sequential gating
+
+  // Self-serve purchase path. `priceCents` is EGP piastres.
+  isPurchasable   Boolean @default(false)
+  priceCents      Int?
+  currency        String  @default("EGP")
+  discountPercent Int?    // rounded % for badges/banner; kept in sync with salePriceCents
+  salePriceCents  Int?    // EXACT on-sale price (source of truth for effective price); null = no sale
+  comingSoon      Boolean @default(false) // teased on the catalog; buying is blocked
+
   instructorId String
   instructor   Instructor  @relation(fields: [instructorId], references: [id])
   createdAt    DateTime    @default(now())
@@ -152,6 +221,14 @@ model Course {
   modules       Module[]
   announcements Announcement[]
   certificates  Certificate[]
+
+  // Purchase path
+  purchases Purchase[]
+
+  // Phase 4
+  attendance AttendanceRecord[]
+
+  savedBy SavedCourse[]
 
   @@index([instructorId])
   @@map("courses")
@@ -167,6 +244,18 @@ model StudentCourseAccess {
   studentId String
   courseId  String
   grantedAt DateTime @default(now())
+
+  // Phase 4 — per-student content-release mode for this course. Exactly one at
+  // a time. See PROJECT.md for precedence. Default GATED reproduces pre-Phase-4
+  // behaviour (GATED delegates to the existing gating, which is a no-op when
+  // the course has gatingEnabled = false).
+  accessMode CourseAccessMode @default(GATED)
+
+  // Phase 4 — set true when an in-person student has PAID to unlock this course's
+  // "extra" items (labs/LeetCode/extras). Also set by any approved self-serve
+  // purchase (whole-course buyers get everything). Lecture items stay gated by
+  // their access mode (attendance drip / gating); only extras key off this.
+  extrasUnlocked Boolean @default(false)
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -321,11 +410,22 @@ model Module {
   prerequisite         Module?  @relation("ModulePrereq", fields: [prerequisiteModuleId], references: [id])
   dependents           Module[] @relation("ModulePrereq")
 
+  // Phase 5 — per-week pricing. A module with a price can be bought on its own;
+  // null/0 means "full course only". Mirrors the course-level price triple so
+  // sales work identically at both levels. The course price is INDEPENDENT of
+  // the sum of its weeks (it's a bundle deal the instructor sets by hand).
+  priceCents      Int?
+  discountPercent Int? // rounded % for badges; kept in sync with salePriceCents
+  salePriceCents  Int? // EXACT on-sale price (source of truth); null = no sale
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items   LessonItem[]
-  unlocks StudentModuleUnlock[]
+  items    LessonItem[]
+  unlocks  StudentModuleUnlock[]
+  releases StudentModuleRelease[]
+  access   StudentModuleAccess[]
+  purchases Purchase[]
 
   @@index([courseId])
   @@map("modules")
@@ -337,10 +437,13 @@ model LessonItem {
   module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   type        LessonType
   title       String
-  orderIndex  Int        @default(0)
-  isPublished Boolean    @default(false)
-  publishAt   DateTime?
-  body        String? // RICH_TEXT payload (markdown); null for other types
+  orderIndex   Int       @default(0)
+  isPublished  Boolean   @default(false)
+  isFreePreview Boolean  @default(false) // publicly viewable without an account (catalog preview)
+  isExtra      Boolean   @default(false) // paid extra (lab/LeetCode/etc.) — gated by payment for in-person students
+  publishAt    DateTime?
+  body         String? // RICH_TEXT payload (markdown); null for other types
+  chapters     String? // optional video chapters, one "M:SS Label" per line
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -389,6 +492,9 @@ model FileAsset {
   documentFor   LessonItem?    @relation("DocumentFile")
   submissions   Submission[]
   announcements Announcement[]
+  instapayQrFor Instructor[]   @relation("InstapayQr")
+  heroPosterFor Instructor[]   @relation("HeroPoster")
+  purchases     Purchase[]
 
   @@map("file_assets")
 }
@@ -682,4 +788,165 @@ model AnnouncementRead {
   @@unique([announcementId, studentId])
   @@index([studentId])
   @@map("announcement_reads")
+}
+
+// ===========================================================================
+// Self-serve purchases (InstaPay screenshot review). See PROJECT.md "Purchases".
+// ===========================================================================
+
+enum PurchaseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PurchaseScope {
+  WHOLE_COURSE // the entire course (bundle) — grants every week, now and future
+  MODULE // a single week, bought à la carte
+}
+
+model Purchase {
+  id                String         @id @default(cuid())
+  studentId         String
+  student           Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId          String
+  course            Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  // Phase 5 — what was bought. MODULE purchases set `moduleId`; WHOLE_COURSE
+  // leaves it null. The price fields below always describe THIS scope.
+  scope             PurchaseScope  @default(WHOLE_COURSE)
+  moduleId          String?
+  module            Module?        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  priceCents        Int // FINAL amount actually charged (EGP piastres) — post all discounts
+  currency          String         @default("EGP")
+  // Phase 4 — price breakdown for clear records:
+  listPriceCents          Int?    // the course's normal list price at purchase time
+  effectivePriceCents     Int?    // public price after any active sale (pre in-person)
+  inPersonDiscountApplied Boolean @default(false) // whether the private 40% was taken
+  // Phase 5 — upgrade credit. On a WHOLE_COURSE purchase this is the total the
+  // student had already PAID for approved single-week purchases in this course,
+  // deducted from the amount charged (floored at zero). Null/0 = no credit.
+  priorCreditCents        Int?
+  screenshotAssetId String?
+  screenshot        FileAsset?     @relation(fields: [screenshotAssetId], references: [id])
+  status            PurchaseStatus @default(PENDING)
+  rejectionReason   String?
+  reviewedAt        DateTime?
+  reviewedById      String?
+  reviewedBy        Instructor?    @relation(fields: [reviewedById], references: [id])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+  @@index([moduleId])
+  @@map("purchases")
+}
+
+// ---------------------------------------------------------------------------
+// StudentModuleAccess (Phase 5) — ownership of a single week, bought à la carte.
+// Deliberately separate from StudentCourseAccess: the course-level row records
+// that the student is ENROLLED (so the course lists on their dashboard and the
+// existing guards pass), while these rows decide WHICH weeks they can open.
+// Only consulted when the course grant's accessMode = PER_MODULE; a whole-course
+// buyer gets FULL/GATED and never needs a row here.
+// ---------------------------------------------------------------------------
+
+model StudentModuleAccess {
+  id        String   @id @default(cuid())
+  studentId String
+  moduleId  String
+  grantedAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, moduleId])
+  @@index([moduleId])
+  @@map("student_module_access")
+}
+
+// ===========================================================================
+// PHASE 4 — In-person students: registration codes, granular (drip) access,
+// and weekly attendance. See PROJECT.md "Phase 4" for narrative/decisions.
+// ===========================================================================
+
+enum CourseAccessMode {
+  FULL // entire course visible at once (no locks)
+  DRIP // only modules the instructor has explicitly released are visible
+  GATED // Phase 2 assignment gating (respects Course.gatingEnabled + prereqs)
+  PER_MODULE // Phase 5 — à la carte: only weeks bought (StudentModuleAccess) are visible
+}
+
+enum AttendanceStatus {
+  ATTENDED
+  ABSENT
+  // "not recorded yet" is the ABSENCE of a row, never a stored value.
+}
+
+/// One in-person student the instructor pre-registers, plus their single-use
+/// registration code. Consuming the code links a real Student account (below).
+/// Status is derived, not stored: revoked (revokedAt) > used (studentId) >
+/// expired (codeExpiresAt) > unused. Structured so a CSV import can bulk-create
+/// these later without schema changes.
+model RosterEntry {
+  id            String    @id @default(cuid())
+  instructorId  String
+  instructor    Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  name          String // the named student, for the instructor's reference
+  email         String? // optional — used only to email the code
+  notes         String?
+  code          String    @unique // human-friendly, single-use
+  codeExpiresAt DateTime? // optional expiry
+  revokedAt     DateTime? // set when the instructor revokes an unused code
+  usedAt        DateTime? // set when the code is consumed at registration
+
+  // The account that registered with this code (1:1). SetNull keeps the roster
+  // row (attendance/history) even if the account is later deleted.
+  studentId String?  @unique
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([instructorId])
+  @@map("roster_entries")
+}
+
+/// Drip release: the instructor has released one module (a "lecture"/"week")
+/// to one student. Sole visibility driver in DRIP access mode. Distinct from
+/// StudentModuleUnlock (a GATED-mode escape hatch) — do not conflate them.
+model StudentModuleRelease {
+  id           String      @id @default(cuid())
+  studentId    String
+  student      Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  moduleId     String
+  module       Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  releasedById String?
+  releasedBy   Instructor? @relation(fields: [releasedById], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@unique([studentId, moduleId])
+  @@index([moduleId])
+  @@map("student_module_releases")
+}
+
+/// Weekly attendance for an in-person student in a course. Week N corresponds
+/// to the Nth module (by orderIndex). A missing row = "not recorded yet".
+model AttendanceRecord {
+  id           String           @id @default(cuid())
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId     String
+  course       Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  week         Int
+  status       AttendanceStatus
+  recordedById String?
+  recordedBy   Instructor?      @relation(fields: [recordedById], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([studentId, courseId, week])
+  @@index([courseId])
+  @@map("attendance_records")
 }

@@ -779,6 +779,60 @@ a recreation.
   film actually keeps most cards modest and reserves oversized type for two hero beats; the user
   confirmed they wanted the louder treatment.
 
+## 5n. Video — Bunny Stream
+
+`VIDEO_PROVIDER=bunny` in production, `local` in development (disk + `<video>`, no credentials
+needed). Selected in `resolveVideoProvider()`; the lesson page branches on
+`videoProvider.playback` (`"file"` vs `"iframe"`), never on the provider name.
+
+### ⚠️ The upload path bypasses the server ON PURPOSE — do not refactor it back
+
+Lecture files are ~2 hours. Their bytes **must never pass through a serverless function**: Vercel
+caps wall-clock at 10s (Hobby) / 60s (Pro) and memory well below a multi-GB file. So
+`bunnyVideo.upload()` **throws by design**, and the real path is:
+
+| Step | Where | Cost |
+| ---- | ----- | ---- |
+| 1. Create the empty video object, mint a TUS signature scoped to that GUID + expiry | server (`POST /api/admin/video/direct-upload`) | milliseconds |
+| 2. Stream the bytes | **browser → Bunny**, TUS resumable | no server involvement |
+| 3. Report outcome, then poll transcoding | server (`/api/admin/video/status`) | milliseconds |
+
+The API key never reaches the browser — only a SHA256 signature over
+`libraryId + apiKey + expiry + videoId`, valid for one video. TUS means a dropped connection on a
+multi-GB file resumes instead of restarting. Every function call stays in the milliseconds, so
+Vercel's timeout is irrelevant regardless of plan.
+
+### Upload state machine (no lesson can wedge in "processing")
+
+| `Video.status` | Meaning | Admin sees |
+| -------------- | ------- | ---------- |
+| `PENDING` | object created, bytes never arrived (tab closed mid-upload) | "Upload never finished" + Retry |
+| `PROCESSING` | bytes delivered, Bunny transcoding | "Processing — N%" |
+| `READY` | playable | "ready" |
+| `ERROR` | browser upload failed, or Bunny reported Error/UploadFailed | error + Retry |
+
+Bunny's numeric status maps as **0 Created · 1 Uploaded · 2 Processing · 3 Transcoding ·
+4 Finished · 5 Error · 6 UploadFailed · 7 JitSegmenting · 8 JitPlaylistsCreated**, taken from the
+API reference. A widely-repeated blog claim that "3 = Finished" is **wrong** and would leave every
+lesson stuck transcoding.
+
+### Playback and protection
+
+Bunny's embedded player in an iframe, via a token-authenticated URL
+(`SHA256(tokenKey + videoId + expiry)`, passed as `?token=&expires=`) so copied links expire.
+Progress tracking survives the swap: Bunny supports **player.js** over postMessage, so
+`components/bunny-player.tsx` still reports position / watched % / completion to `/api/progress`
+exactly as the old `<video>` did. Completion, dashboard percentages and assignment gating are
+unaffected.
+
+**The per-student watermark was removed, deliberately** (instructor's decision, 2026-09-19): a
+leaked lecture is treated as marketing, not loss. Bunny has no per-viewer dynamic watermark anyway
+— only a static library-wide logo applied at encode time — so the overlay would have had to be
+re-implemented over the iframe. It wasn't. The PDF viewer's watermark is untouched.
+
+Protection is now Bunny's rather than ours: expiring signed embeds, referrer/domain allowlisting
+(configured on the library, not in env), and the player's download control.
+
 ## 6. Decisions Log
 
 | Date       | Decision / Change                                                                 | Reason |

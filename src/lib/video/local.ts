@@ -9,6 +9,7 @@ import type { UploadVideoInput, UploadedVideo, VideoAssetRef, VideoProvider } fr
  */
 export const localVideo: VideoProvider = {
   name: "local",
+  playback: "file",
 
   async upload(input: UploadVideoInput): Promise<UploadedVideo> {
     const key = makeStorageKey("videos", input.filename);

@@ -42,3 +42,9 @@ pnpm-debug.log*
 
 # typescript incremental build cache
 *.tsbuildinfo
+
+# launch-video capture (see PROJECT.md §5l)
+.env.capture
+/storage-capture
+/launch-video-assets
+/capture/assets

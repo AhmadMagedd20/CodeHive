@@ -34,6 +34,10 @@ export const registerSchema = z
     acceptTerms: z
       .boolean()
       .refine((v) => v === true, "You must accept the Terms of Use and Privacy Policy"),
+    // In-person branch: when checked, a registration code is required (its
+    // validity is checked server-side against the instructor's roster).
+    isInPerson: z.boolean().optional().default(false),
+    studentCode: z.string().trim().optional().default(""),
     // Bot protection: honeypot must be empty; captcha token optional (checked server-side).
     website: z.string().max(0, "Bot detected").optional().default(""),
     captchaToken: z.string().optional(),
@@ -41,6 +45,10 @@ export const registerSchema = z
   .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .refine((d) => !d.isInPerson || d.studentCode.length > 0, {
+    message: "Enter the code Megz gave you",
+    path: ["studentCode"],
   });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

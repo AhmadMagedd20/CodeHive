@@ -11,6 +11,7 @@ import { storage } from "@/lib/storage";
 import { AppShell } from "@/components/app-shell";
 import { Markdown } from "@/components/markdown";
 import { VideoPlayer } from "@/components/video-player";
+import { BunnyPlayer } from "@/components/bunny-player";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { CompleteButton } from "@/components/complete-button";
 import { QuizPanel } from "@/components/quiz-panel";
@@ -286,13 +287,24 @@ export default async function LessonPage({
 
           {item.type === "VIDEO" &&
             (videoUrl ? (
-              <VideoPlayer
-                src={videoUrl}
-                watermark={watermark}
-                lessonItemId={item.id}
-                initialPosition={progress?.lastPositionSeconds ?? 0}
-                chapters={chapters}
-              />
+              // Branch on the provider's playback KIND, not its name, so a
+              // future provider needs no change here.
+              videoProvider.playback === "iframe" ? (
+                <BunnyPlayer
+                  src={videoUrl}
+                  lessonItemId={item.id}
+                  initialPosition={progress?.lastPositionSeconds ?? 0}
+                  title={item.title}
+                />
+              ) : (
+                <VideoPlayer
+                  src={videoUrl}
+                  watermark={watermark}
+                  lessonItemId={item.id}
+                  initialPosition={progress?.lastPositionSeconds ?? 0}
+                  chapters={chapters}
+                />
+              )
             ) : (
               <div className="rounded-card border-brutal border-ink bg-white py-12 text-center text-ink/50">
                 This video hasn&apos;t been uploaded yet.

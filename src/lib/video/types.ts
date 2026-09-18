@@ -34,10 +34,49 @@ export interface VideoAssetRef {
   storageKey?: string | null;
 }
 
+/**
+ * Everything the BROWSER needs to push bytes straight to the provider.
+ *
+ * Deliberately contains no API key: the signature is minted server-side and is
+ * scoped to one video id and one expiry. See `createDirectUpload`.
+ */
+export interface DirectUploadTicket {
+  provider: string;
+  /** Provider handle for the new (empty) video object. */
+  providerAssetId: string;
+  /** TUS endpoint the browser uploads to. */
+  endpoint: string;
+  /** Headers the browser must echo verbatim — the signature covers them. */
+  headers: Record<string, string>;
+  /** TUS metadata (filetype/title/…). */
+  metadata: Record<string, string>;
+  /** Unix seconds; the upload must finish before this. */
+  expiresAt: number;
+}
+
+/** How playback is delivered, so the lesson page can pick the right component. */
+export type PlaybackKind = "file" | "iframe";
+
 export interface VideoProvider {
   readonly name: string;
+  /**
+   * Server-side upload. Real providers should NOT implement this — lecture
+   * files are ~2h and must never pass through a serverless function. They
+   * throw and expose `createDirectUpload` instead.
+   */
   upload(input: UploadVideoInput): Promise<UploadedVideo>;
-  /** A URL the <video> element can stream from (signed / short-lived). */
+  /**
+   * `file` → a URL for a <video> element. `iframe` → an embed URL for an
+   * <iframe>. The lesson page branches on this, not on the provider name.
+   */
+  readonly playback: PlaybackKind;
+  /** A URL to stream (file) or embed (iframe) from. Signed / short-lived. */
   getStreamUrl(asset: VideoAssetRef, opts?: { expiresInSeconds?: number }): Promise<string>;
   getStatus(asset: VideoAssetRef): Promise<VideoStatus>;
+  /** Present only on providers that support browser-direct upload. */
+  createDirectUpload?(input: {
+    filename: string;
+    contentType: string;
+    title: string;
+  }): Promise<DirectUploadTicket>;
 }

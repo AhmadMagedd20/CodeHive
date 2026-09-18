@@ -55,12 +55,12 @@ export function approvedEmail(to: string): EmailMessage {
   const link = `${env.APP_URL}/login`;
   return {
     to,
-    subject: "Your Cohort Portal account has been approved",
+    subject: "You're in — your Cohort Portal account is approved",
     html: layout(
-      "Account approved 🎉",
-      `<p>Good news — an instructor has approved your account. You can now sign in.</p>${button(link, "Sign in")}`,
+      "You're in 🎉",
+      `<p>Megz approved your account — you're officially in the cohort.</p><p>Sign in, open your course, and start with the first lesson. If you're buying a course yourself, the catalog is waiting.</p>${button(link, "Sign in and start")}`,
     ),
-    text: `Your Cohort Portal account has been approved. Sign in at:\n${link}`,
+    text: `Megz approved your Cohort Portal account — you're in. Sign in and start your first lesson:\n${link}`,
   };
 }
 
@@ -111,6 +111,40 @@ export function assignmentReminderEmail(to: string, title: string, dueAt: Date):
   };
 }
 
+export function registrationCodeEmail(to: string, name: string, code: string): EmailMessage {
+  const link = `${env.APP_URL}/register`;
+  return {
+    to,
+    subject: "Your Cohort Portal registration code",
+    html: layout(
+      `Welcome, ${name} 👋`,
+      `<p>Megz set up your spot on Cohort Portal. Use this code when you register — it approves your account automatically:</p>
+       <p style="font-family:ui-monospace,monospace;font-size:22px;font-weight:700;letter-spacing:2px;background:#EFEAD6;border-radius:8px;padding:14px 18px;text-align:center;color:#34402A">${code}</p>
+       <p>On the sign-up page, tick <em>“I'm taking classes with Megz in person”</em> and enter the code above.</p>${button(link, "Register now")}`,
+    ),
+    text: `Welcome to Cohort Portal, ${name}. Your registration code is: ${code}\nRegister at ${link} — tick "I'm taking classes with Megz in person" and enter the code.`,
+  };
+}
+
+export function lectureReleasedEmail(
+  to: string,
+  courseTitle: string,
+  moduleTitle: string,
+): EmailMessage {
+  const link = `${env.APP_URL}/dashboard`;
+  return {
+    to,
+    subject: `New lecture unlocked in ${courseTitle}`,
+    html: layout(
+      "New material is ready",
+      `<p>Megz just released a new lecture to you:</p>
+       <p style="font-weight:600;color:#34402A">${courseTitle} — ${moduleTitle}</p>
+       <p>It's unlocked on your dashboard now.</p>${button(link, "Open it")}`,
+    ),
+    text: `Megz released a new lecture to you: ${courseTitle} — ${moduleTitle}.\nOpen it at ${link}`,
+  };
+}
+
 export function courseAccessEmail(to: string, courseTitles: string[]): EmailMessage {
   const link = `${env.APP_URL}/dashboard`;
   const list = courseTitles.map((t) => `<li>${t}</li>`).join("");
@@ -122,5 +156,52 @@ export function courseAccessEmail(to: string, courseTitles: string[]): EmailMess
       `<p>You now have access to:</p><ul>${list}</ul>${button(link, "Go to dashboard")}`,
     ),
     text: `You've been granted access to: ${courseTitles.join(", ")}.\nView them at:\n${link}`,
+  };
+}
+
+export function purchaseSubmittedEmail(to: string, courseTitle: string): EmailMessage {
+  const link = `${env.APP_URL}/purchases`;
+  return {
+    to,
+    subject: `We've received your payment for ${courseTitle}`,
+    html: layout(
+      "Payment received — under review",
+      `<p>Thanks! We got your payment proof for <strong>${courseTitle}</strong>.</p>
+       <p>Megz will review it shortly and your access will be granted as soon as it's confirmed —
+       usually within a day. You'll get an email the moment it's approved.</p>${button(link, "View your purchases")}`,
+    ),
+    text: `We received your payment proof for ${courseTitle}. Megz will review it shortly.\nTrack it: ${link}`,
+  };
+}
+
+export function purchaseApprovedEmail(to: string, courseTitle: string): EmailMessage {
+  const link = `${env.APP_URL}/dashboard`;
+  return {
+    to,
+    subject: `You're in — ${courseTitle} is unlocked`,
+    html: layout(
+      "Payment approved 🎉",
+      `<p>Your payment for <strong>${courseTitle}</strong> is confirmed and the course is now in your
+       dashboard. Dive in whenever you're ready.</p>${button(link, "Start the course")}`,
+    ),
+    text: `Your payment for ${courseTitle} is approved — it's now in your dashboard.\n${link}`,
+  };
+}
+
+export function purchaseRejectedEmail(to: string, courseTitle: string, reason?: string): EmailMessage {
+  const link = `${env.APP_URL}/purchases`;
+  return {
+    to,
+    subject: `Action needed on your payment for ${courseTitle}`,
+    html: layout(
+      "We couldn't confirm your payment",
+      `<p>We weren't able to confirm your payment for <strong>${courseTitle}</strong>.</p>${
+        reason
+          ? `<p style="background:#EFEAD6;padding:12px;border-radius:8px"><strong>Reason:</strong> ${reason}</p>`
+          : ""
+      }<p>No need to start over — just re-upload a clearer screenshot of the transfer and we'll take
+       another look.</p>${button(link, "Re-upload proof")}`,
+    ),
+    text: `We couldn't confirm your payment for ${courseTitle}.${reason ? `\nReason: ${reason}` : ""}\nRe-upload proof: ${link}`,
   };
 }

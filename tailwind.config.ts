@@ -1,18 +1,19 @@
 import type { Config } from "tailwindcss";
 
-/**
- * Supporting accent families — "natural dye" palette beside the sage/moss core.
- * Each has: soft (tint background), DEFAULT (fills/icons), strong (text on soft
- * — all strong-on-soft pairs meet WCAG AA ≥4.5:1).
- * Exposed twice: by hue name (clay/amber/mist/rust/fern) and by semantic alias
- * (warning/highlight/info/danger/success). Components should use the SEMANTIC
- * names so meaning stays consistent app-wide.
+/*
+ * === Design system (2026) — bold / friendly / high-contrast ===================
+ * Saturated block-color card fills on an off-white canvas, near-black ink, and a
+ * flame-orange primary. Card fills (sunny/lilac/sky/mint) are equal-lightness
+ * siblings. Semantic triples keep soft(bg)/DEFAULT(fill)/strong(text-on-soft),
+ * all strong-on-soft AA ≥ 4.5:1.
  */
-const clay = { soft: "#FCE1CC", DEFAULT: "#E27B3E", strong: "#9A4A1C" }; // bright terracotta
-const amber = { soft: "#FCEEBE", DEFAULT: "#F2B01E", strong: "#8A5804" }; // marigold gold
-const mist = { soft: "#D3E7EC", DEFAULT: "#2E93AB", strong: "#175B6C" }; // vivid teal
-const rust = { soft: "#FBD6C9", DEFAULT: "#DB4325", strong: "#8E2810" }; // vermillion
-const fern = { soft: "#DBEFC1", DEFAULT: "#5EA62B", strong: "#356315" }; // grass green
+const flameC = { soft: "#FFE4DC", DEFAULT: "#FF5734", strong: "#B32E13" }; // primary action orange
+const sunnyC = { soft: "#FFF3C7", DEFAULT: "#FCCC42", strong: "#7A5B00" }; // yellow fill / highlight
+const lilacC = { soft: "#ECE1FC", DEFAULT: "#BE94F5", strong: "#4B2A80" }; // purple fill / locked-info
+const skyC = { soft: "#DCEEFB", DEFAULT: "#73C2FB", strong: "#0B4C81" }; // blue card fill
+const mintC = { soft: "#DAF3E6", DEFAULT: "#7FD9A6", strong: "#0E6B41" }; // mint card fill
+const grassC = { soft: "#DAF3E6", DEFAULT: "#1FA25A", strong: "#0E6B41" }; // success (white-legible)
+const berryC = { soft: "#FBD9DD", DEFAULT: "#E23744", strong: "#8E1B23" }; // danger (distinct from flame)
 
 const config: Config = {
   darkMode: ["class"],
@@ -25,48 +26,52 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-jost)", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["var(--font-fredoka)", "var(--font-jost)", "sans-serif"],
+        sans: ["var(--font-inter-tight)", "Helvetica", "Arial", "sans-serif"],
+        display: ["var(--font-inter-tight)", "Helvetica", "Arial", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
+      },
+      /*
+       * Brand type scale (kit §03). Each token bakes in the mandated weight,
+       * tracking and leading, so a heading can never be shipped with the wrong
+       * tracking. Display type is ALWAYS tracked negatively — never letterspace
+       * display type positively, at any size.
+       */
+      fontSize: {
+        hero: ["clamp(2.75rem, 7.5vw, 14.5rem)", { lineHeight: "0.92", letterSpacing: "-0.04em", fontWeight: "900" }],
+        section: ["clamp(2.25rem, 5vw, 4rem)", { lineHeight: "1", letterSpacing: "-0.03em", fontWeight: "900" }],
+        subsection: ["clamp(1.75rem, 3.5vw, 2.5rem)", { lineHeight: "1", letterSpacing: "-0.03em", fontWeight: "800" }],
+        "card-title": ["1.5rem", { lineHeight: "1", letterSpacing: "-0.03em", fontWeight: "800" }],
+        "body-lg": ["1.1875rem", { lineHeight: "1.6", letterSpacing: "-0.01em", fontWeight: "400" }],
+        body: ["1rem", { lineHeight: "1.6", letterSpacing: "-0.01em", fontWeight: "400" }],
+        caption: ["0.8125rem", { lineHeight: "1.6", letterSpacing: "-0.01em", fontWeight: "500" }],
+        eyebrow: ["0.6875rem", { lineHeight: "1", letterSpacing: "0.06em", fontWeight: "700" }],
+      },
+      // Tracking tokens for display type that keeps a bespoke size. Display is
+      // NEVER letterspaced positively — `eyebrow` is the one exception, and it
+      // is not display type.
+      letterSpacing: {
+        hero: "-0.04em",
+        display: "-0.03em",
+        body: "-0.01em",
+        eyebrow: "0.06em",
       },
       colors: {
-        // --- Cohort Portal brand palette (reusable app-wide) ---------------
-        sage: {
-          DEFAULT: "#9FAE8C", // primary surface
-          light: "#B8C4A8", // hover backgrounds
-        },
-        moss: {
-          DEFAULT: "#6F7E5B", // accent / depth
-          dark: "#5C6B4A", // pressed / hover
-        },
-        bark: {
-          DEFAULT: "#34402A", // text / ink, footer
-          dark: "#232B1C", // darkest band / pressed
-        },
-        cream: "#F3EEDB", // type-on-sage
-        fog: "#EFEAD6", // card / light section bg
-        paper: "#FAF7EE", // lightest off-white section bg
+        // --- NEW core palette ----------------------------------------------
+        ink: { DEFAULT: "#151313", soft: "#2A2626" }, // near-black surfaces/text
+        flame: flameC, // primary action orange
+        lilac: lilacC, // category/card fill
+        sunny: sunnyC, // category/card fill, active highlight
+        sky: skyC, // card fill
+        mint: mintC, // card fill
+        paper: "#F7F7F5", // app off-white canvas
+        // white is #FFFFFF (Tailwind default)
 
-        // --- Supporting accents (hue names) ---------------------------------
-        clay,
-        amber,
-        mist,
-        rust,
-        fern,
-
-        // --- Semantic tokens (use THESE in components) ----------------------
-        success: fern, // passed, active, completed, granted
-        warning: clay, // due soon, pending, gating, awaiting action
-        danger: rust, // late, rejected, failed, destructive
-        info: mist, // locked, scheduled, informational
-        highlight: amber, // streaks, badges, celebration, featured
-        brand: {
-          DEFAULT: "#6F7E5B", // Moss
-          sage: "#9FAE8C",
-          moss: "#6F7E5B",
-          bark: "#34402A",
-          cream: "#F3EEDB",
-          fog: "#EFEAD6",
-        },
+        // --- Semantic tokens (mapped onto the palette above) ---------------
+        success: grassC, // passed, active, completed, granted
+        warning: sunnyC, // due soon, pending, gating, awaiting action
+        danger: berryC, // late, rejected, failed (distinct from flame primary)
+        info: lilacC, // locked, scheduled, informational
+        highlight: sunnyC, // streaks, badges, celebration, featured
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -101,22 +106,21 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-        arch: "999px 999px 0 0", // the brand gate/arch motif
+        card: "22px", // signature chunky-rounded card
       },
-      // Warm, bark-tinted elevation — never gray-black. Deeper for real depth.
+      // "Brutal" outline — the neo-brutalist signature: a solid 2px ink border on
+      // every component (cards, buttons, inputs, pills, avatars, progress bars).
+      // Pair with `border-ink` for color: `border-brutal border-ink`. One weight,
+      // used everywhere, so it stays a single token to tune instead of a per-file hunt.
+      borderWidth: {
+        brutal: "2px",
+      },
+      // Ink-tinted elevation — mostly flat + crisp borders; soft shadow when floating.
       boxShadow: {
-        hairline: "inset 0 0 0 1px rgba(52,64,42,0.09)",
-        lift: "0 1px 2px rgba(52,64,42,0.06), 0 7px 20px -5px rgba(52,64,42,0.18)",
-        raised: "0 3px 8px rgba(52,64,42,0.10), 0 22px 48px -14px rgba(52,64,42,0.30)",
-        glow: "0 12px 34px -6px rgba(94,166,43,0.5)", // lit-green glow (hover CTAs)
-        "glow-gold": "0 12px 34px -6px rgba(242,176,30,0.55)",
-      },
-      backgroundImage: {
-        // Energetic gradients — the app's new life.
-        energy: "linear-gradient(135deg, #7FB53B 0%, #5C6B4A 100%)", // lit green → moss (CTAs)
-        sunset: "linear-gradient(135deg, #F2B01E 0%, #E27B3E 55%, #DB4325 100%)", // gold→clay→rust
-        "arch-warm": "linear-gradient(180deg, #F2B01E 0%, #E27B3E 100%)", // arch glow
-        "arch-fresh": "linear-gradient(180deg, #7FB53B 0%, #5EA62B 100%)", // fresh-green arch
+        hairline: "inset 0 0 0 1px rgba(21,19,19,0.09)",
+        lift: "0 1px 2px rgba(21,19,19,0.06), 0 7px 20px -5px rgba(21,19,19,0.18)",
+        soft: "0 10px 30px -12px rgba(21,19,19,0.22)",
+        "soft-lg": "0 20px 50px -18px rgba(21,19,19,0.28)",
       },
       keyframes: {
         "accordion-down": {
@@ -158,6 +162,7 @@ const config: Config = {
         rise: "rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
         "grow-x": "grow-x 0.8s cubic-bezier(0.22, 1, 0.36, 1) both",
         pop: "pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "spin-slow": "spin 22s linear infinite",
       },
     },
   },

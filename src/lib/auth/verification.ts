@@ -3,6 +3,7 @@ import { env } from "../env";
 import { generateToken, hashToken } from "../tokens";
 import { sendEmail } from "../email";
 import { verificationEmail } from "../email/templates";
+import { audit } from "../audit";
 
 /**
  * Email verification tokens: single-use, expiring, only the hash is stored.
@@ -26,7 +27,7 @@ export async function issueVerificationToken(student: {
 }
 
 export type VerifyResult =
-  | { ok: true; alreadyVerified: boolean }
+  | { ok: true; alreadyVerified: boolean; activated: boolean }
   | { ok: false; reason: "invalid" | "expired" };
 
 /**
@@ -46,12 +47,20 @@ export async function consumeVerificationToken(rawToken: string): Promise<Verify
   if (record.consumedAt) {
     // Already used. If the student is verified, treat as success (friendly).
     if (record.student.state !== "PENDING_EMAIL_VERIFICATION") {
-      return { ok: true, alreadyVerified: true };
+      return {
+        ok: true,
+        alreadyVerified: true,
+        activated: record.student.state === "ACTIVE",
+      };
     }
     return { ok: false, reason: "invalid" };
   }
 
   if (record.expiresAt.getTime() < Date.now()) return { ok: false, reason: "expired" };
+
+  const wasPending = record.student.state === "PENDING_EMAIL_VERIFICATION";
+  // No manual approval step: a confirmed email is enough. Both in-person
+  // (code-linked) and self-serve accounts go straight to ACTIVE on verification.
 
   await prisma.$transaction([
     prisma.verificationToken.update({
@@ -63,12 +72,19 @@ export async function consumeVerificationToken(rawToken: string): Promise<Verify
       data: {
         emailVerifiedAt: new Date(),
         // Only advance if still pending verification (don't downgrade others).
-        ...(record.student.state === "PENDING_EMAIL_VERIFICATION"
-          ? { state: "PENDING_ADMIN_APPROVAL" }
-          : {}),
+        ...(wasPending ? { state: "ACTIVE" } : {}),
       },
     }),
   ]);
 
-  return { ok: true, alreadyVerified: false };
+  if (wasPending) {
+    await audit({
+      event: "ACCOUNT_APPROVED",
+      success: true,
+      studentId: record.studentId,
+      message: "Activated on email verification (no manual approval step)",
+    });
+  }
+
+  return { ok: true, alreadyVerified: false, activated: true };
 }
