@@ -7,12 +7,10 @@ import { cn } from "@/lib/utils";
 type Variant = "primary" | "secondary" | "onDark" | "onDarkGhost";
 
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    "bg-bark text-cream hover:bg-bark-dark shadow-sm hover:shadow-[0_12px_34px_-10px_rgba(111,126,91,0.75)]",
-  secondary: "border-2 border-bark/60 text-bark hover:bg-bark hover:text-cream",
-  onDark:
-    "bg-cream text-bark hover:bg-white shadow-sm hover:shadow-[0_12px_34px_-8px_rgba(159,174,140,0.85)]",
-  onDarkGhost: "border-2 border-cream/40 text-cream hover:bg-cream/10",
+  primary: "bg-flame text-white shadow-soft",
+  secondary: "border-2 border-ink/15 bg-white text-ink hover:border-flame/40",
+  onDark: "bg-white text-ink shadow-soft",
+  onDarkGhost: "border-2 border-white/40 text-white hover:bg-white/10",
 };
 
 export function LandingButton({
@@ -39,7 +37,7 @@ export function LandingButton({
       <Link
         href={href}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors",
+          "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors",
           size === "lg" ? "h-12 px-7 text-base" : "h-10 px-5 text-sm",
           VARIANTS[variant],
           className,

@@ -7,7 +7,7 @@ export function DotGrid({ className }: { className?: string }) {
 
 /**
  * Soft blurred glow blob for depth. Colour/size/position come from `className`
- * (e.g. "bg-sage/40 h-80 w-80 top-0 -left-20"). Gently floats unless the user
+ * (e.g. "bg-flame/30 h-80 w-80 top-0 -left-20"). Gently floats unless the user
  * prefers reduced motion (handled globally in CSS).
  */
 export function Glow({ className, float }: { className?: string; float?: boolean }) {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { LessonType, University } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireInstructor } from "@/lib/auth/current-user";
+import { parsePriceToCents, deriveSalePricing } from "@/lib/money";
 
 /**
  * Course-structure builder actions. Every action is scoped to the signed-in
@@ -53,18 +54,63 @@ export async function updateCourseSettings(formData: FormData) {
   const course = await ownedCourse(String(formData.get("courseId")));
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
+  const category = String(formData.get("category") ?? "").trim() || null;
   const universityRaw = String(formData.get("university") ?? "");
   const university = (universityRaw === "GUC" || universityRaw === "GIU" ? universityRaw : null) as
     | University
     | null;
   const gatingEnabled = formData.get("gatingEnabled") === "on";
+  const isPurchasable = formData.get("isPurchasable") === "on";
+  const priceCents = parsePriceToCents(String(formData.get("price") ?? ""));
+  const comingSoon = formData.get("comingSoon") === "on";
   if (!title) return;
+
+  // The client submits an exact sale price (the source of truth) — either typed
+  // directly or derived from a typed percentage. We store `salePriceCents`
+  // exactly, plus a rounded `discountPercent` for badges/banner.
+  const { salePriceCents, discountPercent } = deriveSalePricing(
+    priceCents,
+    parsePriceToCents(String(formData.get("salePrice") ?? "")),
+  );
 
   await prisma.course.update({
     where: { id: course.id },
-    data: { title, description, university, gatingEnabled },
+    data: {
+      title,
+      description,
+      category,
+      university,
+      gatingEnabled,
+      isPurchasable,
+      priceCents: priceCents ?? null,
+      discountPercent,
+      salePriceCents,
+      comingSoon,
+    },
   });
   revalidate(course.id);
+}
+
+export async function toggleItemFreePreview(formData: FormData) {
+  const item = await ownedItem(String(formData.get("itemId")));
+  await prisma.lessonItem.update({
+    where: { id: item.id },
+    data: { isFreePreview: !item.isFreePreview },
+  });
+  revalidate(item.module.courseId);
+}
+
+/**
+ * Mark a lesson as paid "extra" (lab/LeetCode/etc.). For in-person students,
+ * extras are gated by a one-time payment instead of by attendance.
+ */
+export async function toggleItemExtra(formData: FormData) {
+  const item = await ownedItem(String(formData.get("itemId")));
+  await prisma.lessonItem.update({
+    where: { id: item.id },
+    data: { isExtra: !item.isExtra },
+  });
+  revalidate(item.module.courseId);
 }
 
 // --- Modules ---------------------------------------------------------------
@@ -95,9 +141,26 @@ export async function updateModule(formData: FormData) {
     if (!prereq) prerequisiteModuleId = null;
   }
 
+  // Phase 5 — per-week price. Blank/zero clears it, making the week available
+  // only as part of the full course.
+  const rawPrice = parsePriceToCents(String(formData.get("price") ?? ""));
+  const priceCents = rawPrice != null && rawPrice > 0 ? rawPrice : null;
+  const { salePriceCents, discountPercent } = deriveSalePricing(
+    priceCents,
+    parsePriceToCents(String(formData.get("salePrice") ?? "")),
+  );
+
   await prisma.module.update({
     where: { id: mod.id },
-    data: { title, description, publishAt, prerequisiteModuleId },
+    data: {
+      title,
+      description,
+      publishAt,
+      prerequisiteModuleId,
+      priceCents,
+      salePriceCents,
+      discountPercent,
+    },
   });
   revalidate(mod.courseId);
 }
@@ -160,8 +223,15 @@ export async function updateItem(formData: FormData) {
   const item = await ownedItem(String(formData.get("itemId")));
   const title = String(formData.get("title") ?? "").trim();
   const publishAt = parseDateTime(formData.get("publishAt"));
+  // Optional video chapters ("M:SS Label" per line) — only for VIDEO items.
+  const chaptersRaw = formData.get("chapters");
+  const chapters =
+    item.type === "VIDEO" && chaptersRaw != null ? String(chaptersRaw).trim() || null : undefined;
   if (!title) return;
-  await prisma.lessonItem.update({ where: { id: item.id }, data: { title, publishAt } });
+  await prisma.lessonItem.update({
+    where: { id: item.id },
+    data: { title, publishAt, ...(chapters !== undefined ? { chapters } : {}) },
+  });
   revalidate(item.module.courseId);
 }
 

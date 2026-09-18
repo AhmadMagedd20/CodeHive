@@ -23,6 +23,7 @@ function FieldError({ msg }: { msg?: string }) {
 export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey?: string }) {
   const [state, action] = useFormState(registerAction, initialFormState);
   const [password, setPassword] = useState("");
+  const [inPerson, setInPerson] = useState(false);
   const errors = state.fieldErrors ?? {};
 
   return (
@@ -87,6 +88,40 @@ export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey?: string }
           required
         />
         <FieldError msg={errors.confirmPassword} />
+      </div>
+
+      {/* In-person branch: reveals the roster code field. */}
+      <div className="rounded-lg border-brutal border-ink bg-muted/30 p-3">
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="isInPerson"
+            name="isInPerson"
+            className="mt-0.5"
+            checked={inPerson}
+            onCheckedChange={(v) => setInPerson(v === true)}
+          />
+          <Label htmlFor="isInPerson" className="text-sm font-normal leading-snug text-muted-foreground">
+            <span className="font-medium text-foreground">
+              I&apos;m taking classes with Megz in person
+            </span>{" "}
+            — enter the code Megz gave you to link your account and get your in-person rate.
+          </Label>
+        </div>
+        {inPerson && (
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="studentCode">Your registration code</Label>
+            <Input
+              id="studentCode"
+              name="studentCode"
+              placeholder="MEGZ-XXXX-XXXX"
+              autoCapitalize="characters"
+              autoComplete="off"
+              className="font-mono uppercase tracking-wide"
+              aria-invalid={!!errors.studentCode}
+            />
+            <FieldError msg={errors.studentCode} />
+          </div>
+        )}
       </div>
 
       {/* Honeypot: hidden from humans, tempting to bots. Must stay empty. */}

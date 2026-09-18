@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ResendVerification } from "@/components/resend-verification";
+import { OnboardingSteps } from "@/components/onboarding-steps";
 import { consumeVerificationToken } from "@/lib/auth/verification";
 
 export const metadata = { title: "Verify email" };
@@ -21,24 +22,25 @@ export default async function VerifyEmailPage({
     : ({ ok: false, reason: "invalid" } as const);
 
   if (result.ok) {
+    // A confirmed email is all it takes — the account is active and can sign in.
     return (
       <Card>
         <CardHeader className="items-center text-center">
+          <OnboardingSteps current={2} />
           <span className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-success-soft text-success-strong">
             <CheckCircle2 className="h-6 w-6" />
           </span>
-          <CardTitle>Email verified</CardTitle>
+          <CardTitle>You&apos;re in! 🎉</CardTitle>
           <CardDescription>
             {result.alreadyVerified
-              ? "Your email was already verified."
-              : "Thanks — your email address is confirmed."}{" "}
-            Your account is now awaiting instructor approval. We&apos;ll email you once it&apos;s
-            reviewed.
+              ? "Your email is already confirmed — your account is ready."
+              : "Your email is confirmed and your account is ready — no waiting."}{" "}
+            Sign in and start learning.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild className="w-full">
-            <Link href="/login">Continue to sign in</Link>
+            <Link href="/login">Sign in and start</Link>
           </Button>
         </CardContent>
       </Card>

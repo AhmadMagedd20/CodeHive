@@ -34,7 +34,7 @@ export function Pre({
         type="button"
         onClick={copy}
         aria-label="Copy code"
-        className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-cream/10 px-2 py-1 text-xs text-cream/80 opacity-0 transition-opacity hover:bg-cream/20 focus:opacity-100 group-hover:opacity-100"
+        className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-xs text-white/80 opacity-0 transition-opacity hover:bg-white/20 focus:opacity-100 group-hover:opacity-100"
       >
         {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
         {copied ? "Copied" : "Copy"}

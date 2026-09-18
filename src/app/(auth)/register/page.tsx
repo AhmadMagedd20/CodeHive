@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { env } from "@/lib/env";
+import { OnboardingSteps } from "@/components/onboarding-steps";
 import { RegisterForm } from "./register-form";
 
 export const metadata = { title: "Create account" };
@@ -16,8 +17,11 @@ export default async function RegisterPage() {
   return (
     <Card>
       <CardHeader>
+        <OnboardingSteps current={0} />
         <CardTitle>Create your account</CardTitle>
-        <CardDescription>Register to request access to your courses.</CardDescription>
+        <CardDescription>
+          Takes under a minute — this form is the whole thing.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <RegisterForm turnstileSiteKey={siteKey} />

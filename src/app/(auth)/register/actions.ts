@@ -6,11 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validation/auth";
 import { hashPassword } from "@/lib/password";
 import { getDefaultInstructorId } from "@/lib/instructor";
+import { checkRegistrationCode } from "@/lib/roster";
 import { issueVerificationToken } from "@/lib/auth/verification";
 import { verifyCaptcha } from "@/lib/captcha";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientInfo } from "@/lib/http";
 import { zodFieldErrors, type FormState } from "@/lib/form";
+import { sendTelegramMessage } from "@/lib/telegram";
+import { newRegistrationMessage } from "@/lib/telegram/templates";
 
 export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const { ip } = getClientInfo();
@@ -37,6 +40,8 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
     acceptTerms: formData.get("acceptTerms") === "on",
+    isInPerson: formData.get("isInPerson") === "on",
+    studentCode: formData.get("studentCode") ?? "",
     website: honeypot,
     captchaToken: formData.get("captchaToken") ?? undefined,
   });
@@ -67,22 +72,54 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
     return { ok: false, fieldErrors, message: "Please fix the highlighted fields." };
   }
 
+  // In-person branch: a valid code links the account to THAT instructor's
+  // roster and flags it in-person. An invalid code fails with a single opaque
+  // message (no code-guessing). The code is consumed atomically at create time.
+  let instructorId: string;
+  let rosterEntryId: string | null = null;
+  if (data.isInPerson) {
+    const check = await checkRegistrationCode(data.studentCode);
+    if (!check.ok) {
+      return { ok: false, fieldErrors: { studentCode: "This code isn't valid." } };
+    }
+    instructorId = check.entry.instructorId;
+    rosterEntryId = check.entry.id;
+  } else {
+    instructorId = await getDefaultInstructorId();
+  }
+
   const passwordHash = await hashPassword(data.password);
-  const instructorId = await getDefaultInstructorId();
 
   let student;
   try {
-    student = await prisma.student.create({
-      data: {
-        username: data.username,
-        email: data.email,
-        university: data.university,
-        passwordHash,
-        instructorId,
-        state: "PENDING_EMAIL_VERIFICATION",
-      },
+    student = await prisma.$transaction(async (tx) => {
+      const created = await tx.student.create({
+        data: {
+          username: data.username,
+          email: data.email,
+          university: data.university,
+          passwordHash,
+          instructorId,
+          isInPerson: rosterEntryId != null,
+          state: "PENDING_EMAIL_VERIFICATION",
+        },
+      });
+      if (rosterEntryId) {
+        // Consume the code, but only if still unused — guards a double-use race.
+        const consumed = await tx.rosterEntry.updateMany({
+          where: { id: rosterEntryId, usedAt: null, studentId: null, revokedAt: null },
+          data: { usedAt: new Date(), studentId: created.id },
+        });
+        if (consumed.count === 0) {
+          throw new CodeRaceError();
+        }
+      }
+      return created;
     });
   } catch (err) {
+    if (err instanceof CodeRaceError) {
+      return { ok: false, fieldErrors: { studentCode: "This code isn't valid." } };
+    }
     // Unique-constraint race between the check above and insert.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return {
@@ -95,5 +132,20 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
 
   await issueVerificationToken(student);
 
+  // Instructor alert (best-effort, never blocks the signup). Fired at account
+  // creation — i.e. before email verification — so Megz sees every attempt.
+  // Must come BEFORE redirect(), which throws to unwind the request.
+  await sendTelegramMessage(
+    newRegistrationMessage({
+      username: student.username,
+      email: student.email,
+      university: student.university,
+      isInPerson: student.isInPerson,
+    }),
+  );
+
   redirect(`/register/success?email=${encodeURIComponent(data.email)}`);
 }
+
+/** Internal sentinel: the code was consumed by someone else mid-transaction. */
+class CodeRaceError extends Error {}

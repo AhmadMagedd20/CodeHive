@@ -41,7 +41,7 @@ export default async function AdminStudentsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-3xl font-semibold tracking-tight">Students</h1>
+      <h1 className="mb-6 font-display text-subsection">Students</h1>
 
       {students.length === 0 ? (
         <Card>
@@ -85,7 +85,7 @@ export default async function AdminStudentsPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="mb-1.5 text-xs font-medium uppercase text-muted-foreground">
+                    <p className="mb-1.5 text-eyebrow uppercase text-muted-foreground">
                       Course access
                     </p>
                     {s.courseAccess.length === 0 ? (
@@ -142,7 +142,7 @@ export default async function AdminStudentsPage() {
                     if (accessibleModules.length === 0 && s.moduleUnlocks.length === 0) return null;
                     return (
                       <div className="border-t pt-3">
-                        <p className="mb-1.5 text-xs font-medium uppercase text-muted-foreground">
+                        <p className="mb-1.5 text-eyebrow uppercase text-muted-foreground">
                           Manual unlocks (gating override)
                         </p>
                         {s.moduleUnlocks.length > 0 && (

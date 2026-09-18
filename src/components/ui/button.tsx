@@ -4,23 +4,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-energy text-primary-foreground shadow-lift hover:-translate-y-px hover:shadow-glow hover:brightness-[1.06]",
-        destructive: "bg-destructive text-destructive-foreground shadow-lift hover:bg-destructive/90",
-        outline:
-          "border border-bark/15 bg-background shadow-hairline hover:border-bark/25 hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-brutal border-ink bg-flame text-white shadow-soft hover:-translate-y-px hover:brightness-[1.04]",
+        // Kit: "Destructive uses danger, never flame" — and reads as ink type on
+        // a danger fill, so it can't be mistaken for the primary action.
+        destructive: "border-brutal border-ink bg-danger text-ink shadow-soft hover:brightness-95",
+        outline: "border-brutal border-ink bg-white text-ink hover:bg-paper",
+        secondary: "border-brutal border-ink bg-secondary text-secondary-foreground hover:brightness-[0.97]",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-flame underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        default: "h-10 px-5 py-2",
+        sm: "h-9 px-4",
+        lg: "h-11 px-8",
         icon: "h-10 w-10",
       },
     },

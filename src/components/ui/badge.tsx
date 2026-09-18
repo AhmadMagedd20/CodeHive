@@ -4,23 +4,27 @@ import { cn } from "@/lib/utils";
 
 /**
  * Status pill system. Semantic variants pull from the palette's soft/strong
- * pairs (all AA-contrast): success=fern, warning=clay, danger/destructive=rust,
- * info=mist, highlight=amber. Use the semantic name that matches the MEANING.
+ * pairs (all AA-contrast): success=grass, warning=sunny, danger/destructive=berry,
+ * info=lilac, highlight=sunny. Use the semantic name that matches the MEANING.
+ * Every variant carries the brutal outline — solid ink border, no tinted/transparent
+ * borders — per the neo-brutalist system.
  */
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-5 transition-colors [&_svg]:h-3 [&_svg]:w-3 [&_svg]:shrink-0",
+  "inline-flex items-center gap-1 rounded-full border-brutal border-ink px-2.5 py-0.5 text-xs font-semibold leading-5 transition-colors [&_svg]:h-3 [&_svg]:w-3 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-bark/10 bg-secondary text-secondary-foreground",
-        success: "border-success-strong/15 bg-success-soft text-success-strong",
-        warning: "border-warning-strong/15 bg-warning-soft text-warning-strong",
-        destructive: "border-danger-strong/15 bg-danger-soft text-danger-strong",
-        danger: "border-danger-strong/15 bg-danger-soft text-danger-strong",
-        info: "border-info-strong/15 bg-info-soft text-info-strong",
-        highlight: "border-highlight-strong/15 bg-highlight-soft text-highlight-strong",
-        outline: "border-bark/15 text-foreground",
+        // Kit: "A badge never uses flame — flame is reserved for things you can
+        // click." The neutral badge is therefore an ink fill, not the primary.
+        default: "bg-ink text-white",
+        secondary: "bg-secondary text-secondary-foreground",
+        success: "bg-success-soft text-success-strong",
+        warning: "bg-warning-soft text-warning-strong",
+        destructive: "bg-danger-soft text-danger-strong",
+        danger: "bg-danger-soft text-danger-strong",
+        info: "bg-info-soft text-info-strong",
+        highlight: "bg-highlight-soft text-highlight-strong",
+        outline: "bg-transparent text-foreground",
       },
     },
     defaultVariants: { variant: "default" },

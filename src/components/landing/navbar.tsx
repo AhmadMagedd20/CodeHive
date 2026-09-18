@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import { BrandLogo } from "@/components/logo";
 import { LandingButton } from "./cta-button";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
+  { label: "Free Lesson", href: "#try-a-lesson" },
   { label: "What You Get", href: "#what-you-get" },
   { label: "How It Works", href: "#how-it-works" },
+  { label: "Courses", href: "/catalog" },
   { label: "About Megz", href: "#about" },
   { label: "Log In", href: "/login" },
 ];
@@ -30,12 +32,12 @@ export function Navbar() {
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled ? "bg-fog/80 shadow-[0_1px_0_rgba(52,64,42,0.08)] backdrop-blur-md" : "bg-transparent",
+        scrolled ? "bg-paper/85 shadow-[0_1px_0_rgba(21,19,19,0.06)] backdrop-blur-md" : "bg-transparent",
       )}
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" aria-label="Cohort Portal home" className="shrink-0">
-          <BrandLogo variant="horizontal" color="moss" priority className="h-6 sm:h-7" />
+          <Logo size="md" />
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -43,7 +45,7 @@ export function Navbar() {
             <Link
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-bark/70 transition-colors hover:text-bark"
+              className="text-sm font-semibold text-ink/65 transition-colors hover:text-ink"
             >
               {l.label}
             </Link>
@@ -60,7 +62,7 @@ export function Navbar() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Close menu" : "Open menu"}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-bark hover:bg-sage/30 md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-ink/5 md:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -73,7 +75,7 @@ export function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="overflow-hidden border-t border-bark/10 bg-fog/95 backdrop-blur-md md:hidden"
+            className="overflow-hidden border-t border-black/5 bg-paper/97 backdrop-blur-md md:hidden"
           >
             <div className="flex flex-col gap-1 px-4 py-4">
               {LINKS.map((l) => (
@@ -81,7 +83,7 @@ export function Navbar() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-bark/80 hover:bg-sage/25"
+                  className="rounded-xl px-3 py-2.5 text-sm font-semibold text-ink/75 hover:bg-ink/5"
                 >
                   {l.label}
                 </Link>

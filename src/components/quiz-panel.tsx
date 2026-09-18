@@ -144,7 +144,7 @@ export function QuizPanel({
 
           {pastAttempts.length > 0 && (
             <div className="rounded-lg border">
-              <p className="border-b px-3 py-2 text-xs font-medium uppercase text-muted-foreground">
+              <p className="border-b px-3 py-2 text-eyebrow uppercase text-muted-foreground">
                 Your attempts
               </p>
               <ul className="divide-y text-sm">

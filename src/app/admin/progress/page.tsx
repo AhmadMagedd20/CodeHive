@@ -33,12 +33,31 @@ export default async function AdminProgressPage() {
         username: true,
         email: true,
         state: true,
+        isInPerson: true,
         lastLearningActivityAt: true,
         courseAccess: { select: { courseId: true } },
       },
       orderBy: { username: "asc" },
     }),
   ]);
+
+  // Attendance rate per in-person student (across their courses) for the
+  // at-risk view — a low rate is another early-warning signal.
+  const attendance = await prisma.attendanceRecord.findMany({
+    where: { student: { instructorId: instructor.id, isInPerson: true } },
+    select: { studentId: true, status: true },
+  });
+  const attRate = new Map<string, number>();
+  {
+    const tally = new Map<string, { att: number; total: number }>();
+    for (const a of attendance) {
+      const t = tally.get(a.studentId) ?? { att: 0, total: 0 };
+      t.total += 1;
+      if (a.status === "ATTENDED") t.att += 1;
+      tally.set(a.studentId, t);
+    }
+    for (const [id, t] of tally) attRate.set(id, Math.round((t.att / t.total) * 100));
+  }
 
   // Live item ids per course (few queries), + reverse map for tallying.
   const courseTitle = new Map(courses.map((c) => [c.id, c.title]));
@@ -98,11 +117,11 @@ export default async function AdminProgressPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-10 items-end justify-center rounded-arch bg-arch-fresh pb-1.5 shadow-glow">
-          <TrendingUp className="h-5 w-5 text-cream" />
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lilac shadow-soft">
+          <TrendingUp className="h-5 w-5 text-ink" />
         </span>
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Progress</h1>
+          <h1 className="font-display text-subsection">Progress</h1>
           <p className="text-sm text-muted-foreground">
             Completion per student per course, and who&apos;s falling behind.
           </p>
@@ -132,6 +151,11 @@ export default async function AdminProgressPage() {
                   <span>
                     <span className="font-medium">{s.username}</span>{" "}
                     <span className="text-muted-foreground">{s.email}</span>
+                    {s.isInPerson && attRate.has(s.id) && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">
+                        · {attRate.get(s.id)}% attendance
+                      </span>
+                    )}
                   </span>
                   <Badge variant="warning">
                     {inactive === null ? "Never active" : `${inactive}d inactive`}
@@ -174,7 +198,7 @@ export default async function AdminProgressPage() {
                         <ProgressBar
                           value={r.percent}
                           className="w-28"
-                          tone={r.percent === 100 ? "success" : "energy"}
+                          tone={r.percent === 100 ? "success" : "flame"}
                         />
                         <span className="whitespace-nowrap text-xs text-muted-foreground">
                           {r.completed}/{r.total}

@@ -49,7 +49,7 @@ export default async function AssignmentBuilderPage({ params }: { params: { item
         <ArrowLeft className="h-4 w-4" /> Back to course
       </Link>
       <div className="mb-1 flex items-center gap-2">
-        <h1 className="font-display text-2xl font-semibold">{item.title}</h1>
+        <h1 className="font-display text-subsection">{item.title}</h1>
         {a?.isGating && <Badge variant="warning">Gating</Badge>}
       </div>
       <p className="mb-6 text-sm text-muted-foreground">

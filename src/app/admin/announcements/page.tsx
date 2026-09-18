@@ -31,11 +31,11 @@ export default async function AdminAnnouncementsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-10 items-end justify-center rounded-arch bg-arch-warm pb-1.5 shadow-glow-gold">
-          <Megaphone className="h-5 w-5 text-cream" />
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-flame shadow-soft">
+          <Megaphone className="h-5 w-5 text-white" />
         </span>
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Announcements</h1>
+          <h1 className="font-display text-subsection">Announcements</h1>
           <p className="text-sm text-muted-foreground">
             Post to a single course or everyone. Students are emailed automatically.
           </p>
@@ -53,7 +53,7 @@ export default async function AdminAnnouncementsPage() {
       </Card>
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">
+        <h2 className="font-display text-card-title">
           Posted <span className="text-muted-foreground">({announcements.length})</span>
         </h2>
         {announcements.length === 0 ? (

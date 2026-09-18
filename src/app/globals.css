@@ -3,55 +3,35 @@
 @tailwind utilities;
 
 /*
- * The Cohort Portal palette
- *   Sage #9FAE8C · Moss #6F7E5B · Bark #34402A · Cream #F3EEDB · Fog #EFEAD6
+ * Cohort Portal design system — brand kit v1.0
+ *   Inter Tight · flame #FF5734 · 2px ink border
+ *   ink #151313 · flame #FF5734 · lilac #BE94F5 · sunny #FCCC42 · paper #F7F7F5
  * Values below are HSL (consumed via hsl(var(--token))).
  */
 @layer base {
   :root {
-    --background: 42 42% 89%; /* deeper warm cream page — more separation */
-    --foreground: 95 28% 16%; /* deeper bark ink — stronger contrast */
-    --card: 46 60% 98%; /* crisp near-white, clearly lifts off the page */
-    --card-foreground: 95 28% 16%;
-    --popover: 46 60% 98%;
-    --popover-foreground: 95 28% 16%;
-    --primary: 88 34% 38%; /* richer, more saturated moss-green */
-    --primary-foreground: 47 55% 96%;
-    --secondary: 84 30% 84%; /* livelier sage */
-    --secondary-foreground: 95 28% 18%;
-    --muted: 44 34% 87%;
-    --muted-foreground: 92 14% 36%;
-    --accent: 84 36% 82%; /* sage hover — more chroma */
-    --accent-foreground: 95 28% 18%;
-    --destructive: 12 71% 50%; /* vermillion rust — vivid */
-    --destructive-foreground: 47 55% 97%;
-    --border: 44 26% 79%;
-    --input: 44 26% 79%;
-    --ring: 88 40% 40%; /* green focus */
-    --radius: 0.7rem;
+    --background: 60 6% 96%; /* paper #F7F7F5 off-white canvas */
+    --foreground: 0 5% 8%; /* ink #151313 */
+    --card: 0 0% 100%; /* white card surfaces */
+    --card-foreground: 0 5% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 5% 8%;
+    --primary: 11 100% 66%; /* flame #FF5734 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 5% 94%; /* light neutral chip */
+    --secondary-foreground: 0 5% 8%;
+    --muted: 60 5% 94%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 60 5% 92%; /* neutral hover */
+    --accent-foreground: 0 5% 8%;
+    --destructive: 355 72% 55%; /* berry #E23744 (distinct from flame) */
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 88%; /* crisp light border */
+    --input: 0 0% 88%;
+    --ring: 11 100% 66%; /* flame focus */
+    --radius: 1rem;
   }
-
-  .dark {
-    --background: 95 22% 11%; /* deep bark */
-    --foreground: 47 48% 91%; /* Cream */
-    --card: 93 21% 16%;
-    --card-foreground: 47 48% 91%;
-    --popover: 93 21% 15%;
-    --popover-foreground: 47 48% 91%;
-    --primary: 86 17% 62%; /* Sage pops on dark */
-    --primary-foreground: 93 24% 14%; /* Bark text on sage */
-    --secondary: 93 15% 24%;
-    --secondary-foreground: 47 48% 91%;
-    --muted: 93 13% 22%;
-    --muted-foreground: 86 18% 70%;
-    --accent: 93 15% 27%;
-    --accent-foreground: 47 48% 91%;
-    --destructive: 12 57% 35%; /* rust.strong */
-    --destructive-foreground: 47 50% 94%;
-    --border: 93 14% 28%;
-    --input: 93 14% 28%;
-    --ring: 86 17% 62%; /* Sage focus */
-  }
+  /* No dark theme: the app forces the light canvas (see RootLayout themeInit). */
 }
 
 @layer base {
@@ -65,24 +45,43 @@
 
 @layer components {
   /* Animated brand gradient text (pair with `animate-shimmer` in markup). */
-  .text-gradient {
-    background-image: linear-gradient(100deg, #7fb53b, #5ea62b, #f2b01e, #5ea62b, #7fb53b);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Light variant for gradient text on dark (bark) backgrounds. */
+  /*
+   * `background-clip: text` paints the gradient ONLY inside the element's own
+   * box. Display headings run a tight line-height (and Tailwind's arbitrary
+   * `text-[…]` sizes ship an implicit `line-height: 1`), which makes that box
+   * shorter than the font's real ascender+descender extent — so glyph tails
+   * (y, g, p, j, q) get cropped. Plain text isn't affected because normal glyph
+   * painting is free to overflow a short line box; clipped-background text is not.
+   *
+   * Fix: grow the paint box vertically, then pull the same amount back off the
+   * margin so layout and line rhythm are untouched. 0.22em per side covers
+   * Inter Tight's descenders at 900 weight with headroom.
+   */
+  .text-gradient,
   .text-gradient-light {
-    background-image: linear-gradient(100deg, #b8c4a8, #f3eedb, #9fae8c, #f3eedb, #b8c4a8);
+    display: inline-block;
+    padding-block: 0.22em;
+    margin-block: -0.22em;
+  }
+
+  .text-gradient {
+    background-image: linear-gradient(100deg, #ff5734, #fccc42, #ff5734);
     background-size: 200% auto;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
-  /* highlight.js: keep code blocks on brand bark; use only the token colours. */
+  /* Light variant for gradient text on dark (ink) backgrounds. */
+  .text-gradient-light {
+    background-image: linear-gradient(100deg, #fccc42, #ffffff, #fccc42);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* highlight.js: let code blocks inherit the ink surface; use only token colours. */
   .hljs {
     background: transparent !important;
     padding: 0 !important;
@@ -90,7 +89,7 @@
 
   /* Faint dot grid used behind the landing page. */
   .dot-grid {
-    background-image: radial-gradient(circle, rgba(159, 174, 140, 0.28) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgba(21, 19, 19, 0.09) 1px, transparent 1px);
     background-size: 22px 22px;
   }
 

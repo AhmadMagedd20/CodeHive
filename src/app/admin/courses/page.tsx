@@ -24,7 +24,7 @@ export default async function AdminCoursesPage() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
       <div>
-        <h1 className="mb-6 font-display text-3xl font-semibold tracking-tight">Courses</h1>
+        <h1 className="mb-6 font-display text-subsection">Courses</h1>
         {courses.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">

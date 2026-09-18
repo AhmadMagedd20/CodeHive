@@ -54,7 +54,7 @@ export default async function QuizBuilderPage({ params }: { params: { itemId: st
       >
         <ArrowLeft className="h-4 w-4" /> Back to course
       </Link>
-      <h1 className="mb-1 font-display text-2xl font-semibold">{item.title}</h1>
+      <h1 className="mb-1 font-display text-subsection">{item.title}</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Practice quiz · {item.module.title}. Results are for student tracking only — not a grade or a
         gate.
@@ -95,7 +95,7 @@ export default async function QuizBuilderPage({ params }: { params: { itemId: st
         </CardContent>
       </Card>
 
-      <h2 className="mb-3 font-display text-xl font-semibold">
+      <h2 className="mb-3 font-display text-card-title">
         Questions <span className="text-muted-foreground">({questions.length})</span>
       </h2>
       <QuizQuestions itemId={item.id} questions={questions} />

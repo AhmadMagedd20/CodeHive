@@ -12,6 +12,8 @@ import {
   Pencil,
   X,
   Save,
+  Star,
+  Coins,
 } from "lucide-react";
 import type { LessonType } from "@prisma/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -23,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/submit-button";
 import { LESSON_TYPE_META, LESSON_TYPE_ORDER } from "@/components/lesson-type";
+import { formatPrice } from "@/lib/money";
 import { ContentUpload } from "./content-upload";
 import {
   createModule,
@@ -35,6 +38,8 @@ import {
   updateItemBody,
   deleteItem,
   toggleItemPublish,
+  toggleItemFreePreview,
+  toggleItemExtra,
   moveItem,
 } from "./actions";
 
@@ -43,8 +48,11 @@ export type ItemDTO = {
   type: LessonType;
   title: string;
   isPublished: boolean;
+  isFreePreview: boolean;
+  isExtra: boolean;
   publishAt: string | null;
   body: string | null;
+  chapters: string | null;
   hasContent: boolean;
 };
 export type ModuleDTO = {
@@ -54,6 +62,9 @@ export type ModuleDTO = {
   isPublished: boolean;
   publishAt: string | null;
   prerequisiteModuleId: string | null;
+  /** Phase 5 — per-week price in EGP piastres. Null = full course only. */
+  priceCents: number | null;
+  salePriceCents: number | null;
   items: ItemDTO[];
 };
 
@@ -68,6 +79,33 @@ function StatusBadge({ isPublished, publishAt }: { isPublished: boolean; publish
   if (isPublished) return <Badge variant="success">Published</Badge>;
   if (publishAt && new Date(publishAt) > new Date()) return <Badge variant="warning">Scheduled</Badge>;
   return <Badge variant="secondary">Draft</Badge>;
+}
+
+/**
+ * Shows whether this week is sold on its own, straight on the collapsed card.
+ * Without it, a priced and an unpriced week are indistinguishable and the
+ * per-week pricing feature is invisible until you open the editor.
+ */
+function ModulePriceBadge({
+  priceCents,
+  salePriceCents,
+}: {
+  priceCents: number | null;
+  salePriceCents: number | null;
+}) {
+  if (priceCents == null || priceCents <= 0) {
+    return <Badge variant="outline">Full course only</Badge>;
+  }
+  const onSale = salePriceCents != null && salePriceCents < priceCents;
+  return (
+    <Badge variant="highlight">
+      <Coins />
+      {formatPrice(onSale ? salePriceCents! : priceCents)}
+      {onSale && (
+        <span className="ml-1 font-normal line-through opacity-60">{formatPrice(priceCents)}</span>
+      )}
+    </Badge>
+  );
 }
 
 /** A one-button <form> firing a server action with hidden fields. */
@@ -128,12 +166,36 @@ function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; i
           {label}
         </Badge>
         <StatusBadge isPublished={item.isPublished} publishAt={item.publishAt} />
+        {item.isFreePreview && <Badge variant="highlight">Free preview</Badge>}
+        {item.isExtra && <Badge variant="warning">Paid extra</Badge>}
         <div className="flex items-center">
           <IconForm action={moveItem} fields={{ itemId: item.id, dir: "up" }} title="Move up" disabled={isFirst}>
             <ChevronUp className="h-4 w-4" />
           </IconForm>
           <IconForm action={moveItem} fields={{ itemId: item.id, dir: "down" }} title="Move down" disabled={isLast}>
             <ChevronDown className="h-4 w-4" />
+          </IconForm>
+          <IconForm
+            action={toggleItemExtra}
+            fields={{ itemId: item.id }}
+            title={
+              item.isExtra
+                ? "Paid extra — make it a free lecture"
+                : "Mark as paid extra (lab/LeetCode); in-person students pay to unlock"
+            }
+          >
+            <Coins className={item.isExtra ? "h-4 w-4 fill-warning text-warning-strong" : "h-4 w-4"} />
+          </IconForm>
+          <IconForm
+            action={toggleItemFreePreview}
+            fields={{ itemId: item.id }}
+            title={item.isFreePreview ? "Remove free preview" : "Make free preview (public)"}
+          >
+            {item.isFreePreview ? (
+              <Star className="h-4 w-4 fill-highlight text-highlight-strong" />
+            ) : (
+              <Star className="h-4 w-4" />
+            )}
           </IconForm>
           <IconForm
             action={toggleItemPublish}
@@ -172,6 +234,18 @@ function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; i
             <Label className="text-xs">Scheduled publish (optional)</Label>
             <Input type="datetime-local" name="publishAt" defaultValue={toLocalInput(item.publishAt)} />
           </div>
+          {item.type === "VIDEO" && (
+            <div className="w-full space-y-1">
+              <Label className="text-xs">Chapters (optional) — one “M:SS Label” per line</Label>
+              <Textarea
+                name="chapters"
+                defaultValue={item.chapters ?? ""}
+                rows={4}
+                placeholder={"0:00 Intro\n2:34 Setting up\n7:10 Worked example"}
+                className="font-mono text-sm"
+              />
+            </div>
+          )}
           <SubmitButton size="sm" pendingText="Saving…">
             Save
           </SubmitButton>
@@ -255,9 +329,13 @@ function ModuleCard({
       <CardHeader className="gap-3 space-y-0">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="truncate font-display text-lg font-semibold">{module.title}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate font-display text-lg font-extrabold tracking-display">{module.title}</h3>
               <StatusBadge isPublished={module.isPublished} publishAt={module.publishAt} />
+              {/* Per-week price, visible without opening the editor — otherwise
+                  priced and unpriced weeks look identical and the whole
+                  sell-this-week feature is invisible. */}
+              <ModulePriceBadge priceCents={module.priceCents} salePriceCents={module.salePriceCents} />
             </div>
             {module.description && (
               <p className="mt-0.5 truncate text-sm text-muted-foreground">{module.description}</p>
@@ -277,6 +355,16 @@ function ModuleCard({
             >
               {module.isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </IconForm>
+            {/* Explicit entry point for per-week pricing. The generic pencil
+                gave no hint that price lived inside it. */}
+            <button
+              type="button"
+              title="Set this week's price"
+              onClick={() => setEditing(true)}
+              className="flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <Coins className="h-4 w-4" /> Price
+            </button>
             <button
               type="button"
               title="Edit module"
@@ -323,6 +411,34 @@ function ModuleCard({
                     </option>
                   ))}
               </Select>
+            </div>
+            <div className="w-full rounded-lg border-brutal border-ink bg-background p-3">
+              <p className="mb-2 text-xs font-medium">
+                Sell this week on its own{" "}
+                <span className="font-normal text-muted-foreground">
+                  — leave the price blank so it&apos;s only available inside the full course.
+                </span>
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Week price (EGP)</Label>
+                  <Input
+                    name="price"
+                    inputMode="decimal"
+                    placeholder="e.g. 400"
+                    defaultValue={module.priceCents != null ? module.priceCents / 100 : ""}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Sale price (EGP)</Label>
+                  <Input
+                    name="salePrice"
+                    inputMode="decimal"
+                    placeholder="optional"
+                    defaultValue={module.salePriceCents != null ? module.salePriceCents / 100 : ""}
+                  />
+                </div>
+              </div>
             </div>
             <SubmitButton size="sm" pendingText="Saving…">
               Save

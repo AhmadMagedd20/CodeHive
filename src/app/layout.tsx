@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
-import { Fredoka, Jost } from "next/font/google";
+import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const fredoka = Fredoka({
+// Brand kit v1.0: Inter Tight carries the whole system — display weights run
+// heavy (800/900) and always tracked negatively; body is 400/500.
+const interTight = Inter_Tight({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-fredoka",
+  weight: ["400", "500", "700", "800", "900"],
+  variable: "--font-inter-tight",
   display: "swap",
 });
 
-const jost = Jost({
+// Monospace is JetBrains Mono — code blocks, the code editor, InstaPay handles.
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  variable: "--font-jost",
+  weight: ["400", "500", "700"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -39,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${fredoka.variable} ${jost.variable} scroll-smooth`}
+      className={`${interTight.variable} ${jetbrainsMono.variable} scroll-smooth`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />

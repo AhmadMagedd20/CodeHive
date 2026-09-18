@@ -23,7 +23,7 @@ export function Markdown({ content, className }: { content: string; className?: 
         "[&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6",
         "[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground",
         "[&_:not(pre)>code]:rounded [&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-sm",
-        "[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-bark [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-cream [&_pre_code]:font-mono",
+        "[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-ink [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-white [&_pre_code]:font-mono",
         "[&_img]:rounded-lg [&_table]:w-full [&_th]:border-b [&_th]:py-1 [&_th]:text-left [&_td]:border-b [&_td]:py-1",
         className,
       )}

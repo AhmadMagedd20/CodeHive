@@ -109,7 +109,7 @@ export default async function GradingPage({
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <div className="mb-2 flex items-center gap-3">
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Grading queue</h1>
+          <h1 className="font-display text-subsection">Grading queue</h1>
           <Badge variant={total ? "warning" : "secondary"}>{total}</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -123,7 +123,7 @@ export default async function GradingPage({
       {/* ---- Assignment submissions ---- */}
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-display text-xl font-semibold">
+          <h2 className="font-display text-card-title">
             Submissions <span className="text-muted-foreground">({submissions.length})</span>
           </h2>
           <form method="get" className="flex flex-wrap items-center gap-2">
@@ -152,7 +152,7 @@ export default async function GradingPage({
         {submissions.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-              <span className="flex h-14 w-12 items-end justify-center rounded-arch bg-success-soft pb-2">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft">
                 <CheckCircle2 className="h-5 w-5 text-success-strong" />
               </span>
               <p className="text-sm text-muted-foreground">No submissions awaiting grading.</p>
@@ -190,13 +190,13 @@ export default async function GradingPage({
 
       {/* ---- Short-answer quiz responses ---- */}
       <section className="space-y-4">
-        <h2 className="font-display text-xl font-semibold">
+        <h2 className="font-display text-card-title">
           Quiz short answers <span className="text-muted-foreground">({pendingAnswers.length})</span>
         </h2>
         {pendingAnswers.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-              <span className="flex h-14 w-12 items-end justify-center rounded-arch bg-success-soft pb-2">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-success-soft">
                 <CheckCircle2 className="h-5 w-5 text-success-strong" />
               </span>
               <p className="text-sm text-muted-foreground">No quiz answers awaiting grading.</p>

@@ -58,7 +58,7 @@ export function GradeForm({
         <input type="hidden" name="submissionId" value={submissionId} />
 
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <Label className="text-xs uppercase text-muted-foreground">Result</Label>
+          <Label className="text-eyebrow uppercase text-muted-foreground">Result</Label>
           <label className="flex items-center gap-1.5">
             <input type="radio" name="passed" value="pass" defaultChecked className="h-4 w-4 accent-[color:hsl(var(--primary))]" />
             Pass
@@ -68,7 +68,7 @@ export function GradeForm({
             Not passed (student can resubmit)
           </label>
           <div className="flex items-center gap-2">
-            <Label htmlFor={`score-${submissionId}`} className="text-xs uppercase text-muted-foreground">
+            <Label htmlFor={`score-${submissionId}`} className="text-eyebrow uppercase text-muted-foreground">
               Score (optional)
             </Label>
             <Input id={`score-${submissionId}`} name="score" type="number" min={0} className="h-8 w-24" />
