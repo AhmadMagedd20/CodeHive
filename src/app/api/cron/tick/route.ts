@@ -16,11 +16,31 @@ export const dynamic = "force-dynamic";
  *   2. scheduled module/lesson publishes,
  *   3. ~24h-before due-date assignment reminders (deduped per student).
  */
+/**
+ * Accepts either credential shape:
+ *   - `Authorization: Bearer <CRON_SECRET>` — what **Vercel Cron** sends
+ *     automatically when a CRON_SECRET env var exists. It cannot set custom
+ *     headers, so this is the only form it can use.
+ *   - `x-cron-secret: <CRON_SECRET>` — the original contract, kept so an
+ *     external scheduler (pg_cron, a VPS crontab) keeps working unchanged.
+ */
+function authorized(req: NextRequest): boolean {
+  if (!env.CRON_SECRET) return false;
+  const bearer = req.headers.get("authorization");
+  if (bearer === `Bearer ${env.CRON_SECRET}`) return true;
+  return req.headers.get("x-cron-secret") === env.CRON_SECRET;
+}
+
+/** Vercel Cron invokes with GET; external schedulers POST. Same work either way. */
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
+
 export async function POST(req: NextRequest) {
   if (!env.CRON_SECRET) {
     return NextResponse.json({ error: "Cron disabled (CRON_SECRET unset)" }, { status: 503 });
   }
-  if (req.headers.get("x-cron-secret") !== env.CRON_SECRET) {
+  if (!authorized(req)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -879,6 +879,84 @@ Notes that will save an afternoon:
 - **Lead time:** DNS propagation plus a warm-up period. Publish the records and send a low volume
   for about a week before launch so you aren't a cold sender on day one.
 
+## 5p. Vercel deployment
+
+### Cron — two gotchas that silently break it
+
+`vercel.json` registers one job against `/api/cron/tick`. Two things had to change in the route
+first, and both fail **silently** (a 403/405 in a log nobody reads) rather than loudly:
+
+1. **Vercel Cron sends `Authorization: Bearer $CRON_SECRET`.** It cannot set custom headers, so the
+   original `x-cron-secret` contract could never have matched. The route now accepts either, so an
+   external scheduler (pg_cron, a VPS crontab) still works unchanged.
+2. **Vercel Cron invokes with `GET`.** The route was POST-only. It now exports both.
+
+**Hobby plan: cron runs once per day, maximum.** A more frequent expression *fails the deployment*,
+and the invocation lands anywhere inside the specified hour. So on Hobby, scheduled announcements,
+timed lesson publishes and assignment reminders are **daily, not near-real-time**. On Pro, change
+the schedule to `*/10 * * * *` and they behave as designed. Nothing else changes.
+
+That daily tick also **keeps Supabase warm** — free projects pause after 7 days of inactivity, and
+the tick queries the database every run, so a separate keep-warm job isn't needed.
+
+Cron delivery is best-effort: runs can be missed or duplicated. The tick is idempotent by
+construction (reminders are deduped per student, publishes are `updateMany` on a time window), so
+both are safe.
+
+### Environment variables to set in the Vercel dashboard
+
+**Required**
+
+| # | Variable | Value |
+| - | -------- | ----- |
+| 1 | `DATABASE_URL` | Supabase **transaction pooler, port 6543, `?pgbouncer=true`** — see the warning below |
+| 2 | `DIRECT_URL` | Supabase **session pooler, port 5432** (migrations only) |
+| 3 | `SESSION_SECRET` | 32+ random bytes, hex |
+| 4 | `APP_URL` | `https://yourdomain.com` — used in every email link |
+| 5 | `EMAIL_PROVIDER` | `resend` |
+| 6 | `EMAIL_FROM` | `Cohort Portal <no-reply@yourdomain.com>` — must be a **verified** domain |
+| 7 | `RESEND_API_KEY` | from Resend |
+| 8 | `STORAGE_PROVIDER` | `supabase` |
+| 9 | `SUPABASE_URL` | project URL |
+| 10 | `SUPABASE_SERVICE_ROLE_KEY` | service role key — server-only, never `NEXT_PUBLIC_` |
+| 11 | `SUPABASE_STORAGE_BUCKET` | `cohort-media` (create it, keep it **private**) |
+| 12 | `VIDEO_PROVIDER` | `bunny` |
+| 13 | `BUNNY_STREAM_LIBRARY_ID` | numeric library id |
+| 14 | `BUNNY_STREAM_API_KEY` | library API key — server-only |
+| 15 | `BUNNY_STREAM_TOKEN_KEY` | token authentication key |
+| 16 | `CRON_SECRET` | 16+ random chars; Vercel auto-sends it as the Bearer token |
+
+**Optional** — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `CAPTCHA_ENABLED` +
+`TURNSTILE_SECRET_KEY` + `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and the tunables
+(`EMAIL_VERIFICATION_TTL_HOURS`, `PASSWORD_RESET_TTL_MINUTES`, `SESSION_INACTIVITY_MINUTES`,
+`MAX_LOGIN_ATTEMPTS`, `LOGIN_LOCK_MINUTES`, `AT_RISK_INACTIVE_DAYS`,
+`ASSIGNMENT_REMINDER_HOURS`).
+
+**Do NOT set** — `NODE_ENV` (Vercel sets it; overriding breaks the provider defaults),
+`STORAGE_DIR`, `SMTP_*`, `SEED_INSTRUCTOR_*`.
+
+> ⚠️ **`DATABASE_URL` must change for Vercel.** The local `.env` uses the session pooler (5432) for
+> both URLs, which is right for a long-running `next dev`. Vercel is serverless: every function is
+> a fresh connection, and the session pooler will exhaust its connection limit under load. Use the
+> **transaction pooler (6543) with `?pgbouncer=true`** for `DATABASE_URL`, and keep `DIRECT_URL` on
+> 5432 because `prisma migrate` needs a real session.
+
+### Serverless audit
+
+Two places assume something Vercel doesn't provide. Both are known and neither blocks a deploy
+once `STORAGE_PROVIDER=supabase`:
+
+| Where | Assumption | Consequence |
+| ----- | ---------- | ----------- |
+| `lib/storage/local.ts` | writes under `process.cwd()/storage` | **Data loss.** The filesystem is ephemeral — anything written is gone on the next deploy. This is exactly why the Supabase adapter exists. Never ship `STORAGE_PROVIDER=local`. |
+| `lib/rate-limit.ts` | in-memory `Map` + a module-scope `setInterval` sweeper | Limits are **per instance** and reset on every deploy; the sweeper stops when a function freezes (the `Map` dies with the instance anyway, so nothing leaks). Auth throttling still works, just less strictly than intended. Upstash/Redis is the fix, and it is a should-have rather than a blocker. |
+
+Nothing else in `src/` touches `fs`, spawns workers, or holds long-lived state.
+
+`/api/media` still buffers whole objects in memory, but once video lives on Bunny it only serves
+PDFs, payment screenshots and announcement images — all small — so it is no longer a practical
+concern.
+
 ## 6. Decisions Log
 
 | Date       | Decision / Change                                                                 | Reason |
