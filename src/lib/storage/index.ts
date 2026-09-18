@@ -1,21 +1,22 @@
 import { env } from "../env";
 import { localStorage } from "./local";
+import { supabaseStorage } from "./supabase";
 import type { StorageProvider } from "./types";
 
 export * from "./types";
 
 /**
- * Resolve the active storage provider from STORAGE_PROVIDER. Only "local" is
- * implemented today; "supabase" is reserved (adapter to be added — see
- * PROJECT.md Phase 2). Import `storage` everywhere; never touch a provider
- * directly.
+ * Resolve the active storage provider from STORAGE_PROVIDER. Import `storage`
+ * everywhere; never touch a provider directly.
+ *
+ * `local` is dev-only — it writes to STORAGE_DIR, which is ephemeral on any
+ * serverless host, so every payment screenshot and submission would be lost on
+ * the next deploy. Production must run `supabase`.
  */
 function resolveStorage(): StorageProvider {
   switch (env.STORAGE_PROVIDER) {
     case "supabase":
-      throw new Error(
-        "STORAGE_PROVIDER=supabase is not implemented yet. Use 'local' or add the Supabase adapter.",
-      );
+      return supabaseStorage;
     case "local":
     default:
       return localStorage;
