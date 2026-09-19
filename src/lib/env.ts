@@ -24,7 +24,27 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   SESSION_SECRET: z.string().min(16, "SESSION_SECRET must be at least 16 chars"),
-  APP_URL: z.string().url().default("http://localhost:3000"),
+  /**
+   * Public base URL, used to build every link in every email.
+   *
+   * Falls back to Vercel's own production domain when deployed, so a fresh
+   * deploy sends working verification links without anyone having to set this
+   * by hand — you can't know the URL until after the first deploy, and a wrong
+   * value silently breaks the one link every signup depends on.
+   *
+   * VERCEL_PROJECT_PRODUCTION_URL is the STABLE production domain. Do not
+   * substitute VERCEL_URL: that is the per-deployment URL, unique to each
+   * build, so emailed links would rot as soon as you deploy again.
+   * An explicit APP_URL always wins, e.g. once a custom domain is added.
+   */
+  APP_URL: z
+    .string()
+    .url()
+    .default(
+      process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : "http://localhost:3000",
+    ),
 
   // Defaults to `resend` in production and `console` in development, so a
   // deploy can't silently console-log its verification emails and leave
