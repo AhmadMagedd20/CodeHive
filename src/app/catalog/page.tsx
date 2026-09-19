@@ -11,7 +11,22 @@ export const metadata = {
   title: "Courses — Cohort Portal",
   description: "Browse and buy Megz's courses — VOD, solved LeetCode, live lab walk-throughs.",
 };
-export const dynamic = "force-dynamic";
+/**
+ * Cached for 60s — NOT `force-dynamic`.
+ *
+ * Public and identical for every visitor: neither this page, `PublicHeader`
+ * nor the root layout reads `cookies()`, `headers()` or the session, so there
+ * is no per-user state to leak. Ownership and lock state live on the course
+ * and lesson pages, which stay dynamic. If anything here ever needs to know
+ * who is looking, this export has to go.
+ *
+ * 60s rather than the landing page's 600s because `liveWhere()` compares
+ * `publishAt` to *now*: a scheduled course or week becomes visible only when
+ * the page is next rendered, so the cache window is the worst-case delay on a
+ * scheduled release. A minute keeps that imperceptible while still collapsing
+ * a query-per-visitor down to a query-per-minute.
+ */
+export const revalidate = 60;
 
 const FILLS = ["bg-sunny", "bg-lilac", "bg-sky", "bg-mint"] as const;
 
