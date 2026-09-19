@@ -723,6 +723,22 @@ stray shell export can't redirect it. This is the single most important line in 
   ffmpeg re-times it. The files cut cleanly into a 60fps timeline but shouldn't be slowed below
   ~40%.
 
+### Verified against the live bucket (2026-09-19)
+
+Self-test on the real `cohort-media` bucket: `put` -> `exists` -> `getBytes`
+(byte-for-byte roundtrip, content type preserved) -> signed `getUrl` (fetched HTTP 200 from a
+browser) -> `delete`. All passed, including the signed-URL response-field handling that had been
+written blind.
+
+Migration run: **5/5 database-referenced files** (4 payment screenshots + 1 course PDF) uploaded and
+confirmed readable. One 68 MB orphan video failed with Supabase's `EntityTooLarge` — the free tier
+caps a single file at **50 MB**. Harmless: there are **zero `Video` rows in the database**, so all
+four video files on disk are unreferenced test leftovers. Real video is going to Bunny, which has
+no such cap.
+
+Free tier headroom: **1 GB total, 50 MB per file**. Screenshots run 6 KB-1 MB, so that is roughly
+1,000-2,000 of them.
+
 ## 5m. Launch film (Remotion) — lives OUTSIDE this repo
 
 The 20-second launch video is a **separate project**, deliberately not inside the Next.js app:
