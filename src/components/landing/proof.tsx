@@ -20,38 +20,38 @@ type Testimonial = {
 
 const TESTIMONIALS: Testimonial[] = [
   {
-    name: "Lina Amr",
-    detail: "Databases · GUC",
+    name: "Abdullah Ehab",
+    detail: "Data Structures & Algorithms · GUC",
     quote:
-      "I bombed the first quiz, then rewatched the joins lecture until it actually made sense. Got 9/10 on the next one. Being able to replay the exact five minutes I didn't get is what saved me.",
+      "Ahmed Maged definitely made getting an A- in CS3 a lot easier. He explains CS3 in a way that actually makes sense, and you can tell he genuinely cares about whether you understand or not. He can explain multiple concepts without making things confusing or making you forget what you learned before. He just makes CS3 way easier to understand.",
     accent: "fern",
   },
   {
-    name: "Marwan Khaled",
-    detail: "Intro to Programming · GUC",
+    name: "Mariam Ashraf",
+    detail: "Data Structures & Algorithms · GIU",
     quote:
-      "The lab walkthrough was basically the same flow as our lab test. I sat down, typed it like I'd done it before — because I had. Finished early for the first time ever.",
+      "megz is incredibly clever and has a real talent for breaking down difficult concepts into simple steps. He always took the time to go at a pace that worked for me and was extremely patient and supportive throughout. Thanks to his guidance, I was able to retake data structures and get a B- . I highly recommend him.",
     accent: "amber",
   },
   {
-    name: "Abdullah Ehab",
-    detail: "Databases · GIU",
+    name: "Leena",
+    detail: "Data Structures & Algorithms · GUC",
     quote:
-      "Megz's feedback on my submission told me the exact line that was wrong and why. Fixed it, resubmitted, passed the same night. No autograder does that.",
+      "You have been a great help throughout the CS3 course. You explain everything very clearly and always make sure that I fully understand each concept before moving on while solving several examples. You are always patient when explaining things.",
     accent: "clay",
   },
   {
-    name: "Abderahman Yassin",
-    detail: "Data Structures · GUC",
+    name: "Jana",
+    detail: "Data Structures & Algorithms · GUC",
     quote:
-      "The locked lectures annoyed me at first — then I realized I'd kept up all semester without trying. Exam week was the calmest I've ever had.",
+      "I just wanted to say thank you so much for all your effort throughout the course the way you explained everything made the material much easier for me to understand and your guidance really helped me improve, pass the course and get a better grade than I expected I really appreciate everything you did❤️",
     accent: "moss",
   },
   {
-    name: "Abderahman Hawary",
-    detail: "Intro to Programming · GUC",
+    name: "Shabrawy",
+    detail: "Data Structures & Algorithms · GUC",
     quote:
-      "Every solved problem walks through the thinking, not just the answer. That's the part no slides ever gave me — and it's why it finally clicked.",
+      "I’m really grateful for all the time and effort you put into CS3. You always made sure we actually understood what we were doing instead of just memorizing things, and that made a huge difference for me. Your explanations and advice helped me feel much more confident with the course and definitely made the whole experience easier. Thank you for being such a great instructor and for everything you’ve done for us ❤️",
     accent: "mist",
   },
 ];
@@ -100,7 +100,7 @@ function Avatar({ t }: { t: Testimonial }) {
 const STATS = [
   { value: "4", label: "years teaching" },
   { value: "200+", label: "students helped" },
-  { value: "MET, GUC '22", label: "taught by a grad who sat your exams" },
+  { value: "MET, GUC '25", label: "taught by a grad who sat your exams" },
 ];
 
 export function Proof() {
