@@ -61,14 +61,24 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
 
   // Duplicate check (clear inline errors). Enumeration is acceptable here per
   // spec — the anti-enumeration rule applies to login, not registration.
+  // The username check is case-INSENSITIVE, matching how login resolves one.
+  // Login accepts any capitalisation, so allowing both "Megz" and "megz" to
+  // exist would make that lookup ambiguous — it would silently resolve to
+  // whichever row the database happened to return first.
   const existing = await prisma.student.findFirst({
-    where: { OR: [{ email: data.email }, { username: data.username }] },
+    where: {
+      OR: [
+        { email: data.email },
+        { username: { equals: data.username, mode: "insensitive" } },
+      ],
+    },
     select: { email: true, username: true },
   });
   if (existing) {
     const fieldErrors: Record<string, string> = {};
     if (existing.email === data.email) fieldErrors.email = "An account with this email already exists.";
-    if (existing.username === data.username) fieldErrors.username = "This username is already taken.";
+    if (existing.username.toLowerCase() === data.username.toLowerCase())
+      fieldErrors.username = "This username is already taken.";
     return { ok: false, fieldErrors, message: "Please fix the highlighted fields." };
   }
 

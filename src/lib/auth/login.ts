@@ -39,8 +39,21 @@ export async function authenticate(
   const id = identifier.trim().toLowerCase();
 
   // Students match on email OR username; instructors (admins) on email only.
+  //
+  // BOTH comparisons are case-insensitive. Emails are stored lowercased, so
+  // `id` handles those. Usernames deliberately keep whatever capitalisation the
+  // student chose — admin screens read better with "Megz" than "megz" — but
+  // requiring that capitalisation at the login box locked people out: someone
+  // who typed a capital at signup has no way of knowing, months later, that
+  // their username is case-sensitive while their email is not. Matching
+  // insensitively here keeps the display name intact and the login forgiving.
+  //
+  // Registration rejects case-insensitive duplicates for the same reason, so
+  // "Megz" and "megz" cannot both exist and make this lookup ambiguous.
   const student = await prisma.student.findFirst({
-    where: { OR: [{ email: id }, { username: identifier.trim() }] },
+    where: {
+      OR: [{ email: id }, { username: { equals: identifier.trim(), mode: "insensitive" } }],
+    },
   });
   const instructor = student ? null : await prisma.instructor.findUnique({ where: { email: id } });
 
