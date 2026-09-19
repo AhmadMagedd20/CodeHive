@@ -20,6 +20,24 @@ const int = (def: number) =>
     .transform((v) => (v == null || v === "" ? def : Number(v)))
     .pipe(z.number().int().positive());
 
+/**
+ * Best-guess public URL of this deployment, used only as the APP_URL default.
+ * Checked in order of specificity; an explicit APP_URL overrides all of it.
+ */
+function detectAppUrl(): string {
+  // Render: full URL including the scheme.
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
+  // Render fallback: hostname only.
+  if (process.env.RENDER_EXTERNAL_HOSTNAME) {
+    return `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
+  }
+  // Vercel: stable production domain, hostname only.
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
@@ -27,24 +45,19 @@ const schema = z.object({
   /**
    * Public base URL, used to build every link in every email.
    *
-   * Falls back to Vercel's own production domain when deployed, so a fresh
-   * deploy sends working verification links without anyone having to set this
-   * by hand — you can't know the URL until after the first deploy, and a wrong
-   * value silently breaks the one link every signup depends on.
+   * Auto-detected from the host when deployed, so a fresh deploy sends working
+   * verification links with nothing set by hand — you can't know the URL until
+   * after the first deploy, and a wrong value silently breaks the one link
+   * every signup depends on.
    *
-   * VERCEL_PROJECT_PRODUCTION_URL is the STABLE production domain. Do not
-   * substitute VERCEL_URL: that is the per-deployment URL, unique to each
-   * build, so emailed links would rot as soon as you deploy again.
+   *  - Render supplies RENDER_EXTERNAL_URL, already including the scheme.
+   *  - Vercel supplies VERCEL_PROJECT_PRODUCTION_URL, the STABLE production
+   *    domain, hostname only. Do not substitute VERCEL_URL: that is unique per
+   *    deployment, so emailed links would rot on the next build.
+   *
    * An explicit APP_URL always wins, e.g. once a custom domain is added.
    */
-  APP_URL: z
-    .string()
-    .url()
-    .default(
-      process.env.VERCEL_PROJECT_PRODUCTION_URL
-        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : "http://localhost:3000",
-    ),
+  APP_URL: z.string().url().default(detectAppUrl()),
 
   // Defaults to `resend` in production and `console` in development, so a
   // deploy can't silently console-log its verification emails and leave
