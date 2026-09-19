@@ -34,21 +34,21 @@ const TESTIMONIALS: Testimonial[] = [
     accent: "amber",
   },
   {
-    name: "Leena",
+    name: "Leena Ashraf",
     detail: "Data Structures & Algorithms · GUC",
     quote:
       "You have been a great help throughout the CS3 course. You explain everything very clearly and always make sure that I fully understand each concept before moving on while solving several examples. You are always patient when explaining things.",
     accent: "clay",
   },
   {
-    name: "Jana",
+    name: "Jana Mohamed",
     detail: "Data Structures & Algorithms · GUC",
     quote:
       "I just wanted to say thank you so much for all your effort throughout the course the way you explained everything made the material much easier for me to understand and your guidance really helped me improve, pass the course and get a better grade than I expected I really appreciate everything you did❤️",
     accent: "moss",
   },
   {
-    name: "Shabrawy",
+    name: "Omar ElShabrawy",
     detail: "Data Structures & Algorithms · GUC",
     quote:
       "I’m really grateful for all the time and effort you put into CS3. You always made sure we actually understood what we were doing instead of just memorizing things, and that made a huge difference for me. Your explanations and advice helped me feel much more confident with the course and definitely made the whole experience easier. Thank you for being such a great instructor and for everything you’ve done for us ❤️",
