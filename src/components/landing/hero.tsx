@@ -166,7 +166,7 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
           <Reveal delay={0.28}>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
               <LandingButton href="/register">Create Your Account</LandingButton>
-              <LandingButton href="#try-a-lesson" variant="secondary">
+              <LandingButton href="/free-lesson" variant="secondary">
                 <Play className="h-4 w-4 fill-current" /> Watch a Free Lesson
               </LandingButton>
             </div>

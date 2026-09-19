@@ -3,6 +3,7 @@ import { requireInstructor } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HeroVideoForm } from "./hero-video-form";
+import { FreeLessonForm } from "./free-lesson-form";
 
 export const metadata = { title: "Site settings — Admin" };
 export const dynamic = "force-dynamic";
@@ -15,6 +16,9 @@ export default async function AdminSettingsPage() {
       heroVideoFilename: true,
       heroVideoStatus: true,
       heroPosterAssetId: true,
+      freeLessonVideoId: true,
+      freeLessonTitle: true,
+      freeLessonBlurb: true,
     },
   });
 
@@ -45,6 +49,24 @@ export default async function AdminSettingsPage() {
             filename={me.heroVideoFilename}
             status={me.heroVideoStatus}
             hasPoster={me.heroPosterAssetId != null}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Free lesson</CardTitle>
+          <CardDescription>
+            One full lesson at <code className="text-xs">/free-lesson</code>, which the
+            &ldquo;Watch a Free Lesson&rdquo; buttons on the landing page point to. Anyone can
+            watch it — no account, no payment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FreeLessonForm
+            videoId={me.freeLessonVideoId}
+            title={me.freeLessonTitle}
+            blurb={me.freeLessonBlurb}
           />
         </CardContent>
       </Card>

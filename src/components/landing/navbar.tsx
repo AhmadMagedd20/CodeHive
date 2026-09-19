@@ -9,7 +9,7 @@ import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { label: "Free Lesson", href: "#try-a-lesson" },
+  { label: "Free Lesson", href: "/free-lesson" },
   { label: "What You Get", href: "#what-you-get" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Courses", href: "/catalog" },

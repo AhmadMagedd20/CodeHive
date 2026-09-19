@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: { courseId: string 
     where: { id: params.courseId, isPurchasable: true },
     select: { title: true, description: true },
   });
-  return c ? { title: `${c.title} — Cohort Portal`, description: c.description ?? undefined } : {};
+  return c ? { title: c.title, description: c.description ?? undefined } : {};
 }
 
 export default async function CoursePreviewPage({ params }: { params: { courseId: string } }) {

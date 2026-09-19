@@ -86,6 +86,18 @@ model Instructor {
   heroPosterAssetId   String?
   heroPoster          FileAsset? @relation("HeroPoster", fields: [heroPosterAssetId], references: [id])
 
+  // Public "free lesson" page (/free-lesson) — one full lesson anyone can watch
+  // with no account, set from admin settings. Like the hero video this is a
+  // marketing asset, NOT a Video/LessonItem: no course, no gating, no progress.
+  //
+  // Stored as the bare 11-character YouTube id, parsed from whatever link was
+  // pasted, exactly as lesson videos store theirs — so the embed is built by
+  // the same provider code and a full URL never has to be trusted or re-parsed
+  // at render time. Null = the page shows its empty state.
+  freeLessonVideoId String?
+  freeLessonTitle   String?
+  freeLessonBlurb   String?
+
   students Student[]
   courses  Course[]
   session  Session? // polymorphic — an instructor also gets a single session

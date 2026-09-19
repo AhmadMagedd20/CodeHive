@@ -63,6 +63,33 @@ export function parseYouTubeId(input: string): string | null {
   return null;
 }
 
+/**
+ * Build the embed URL for a YouTube id.
+ *
+ * Exported so the public free-lesson page uses exactly these rules rather than
+ * assembling its own iframe src — the embed host and the privacy/branding
+ * parameters should have one definition, not two that drift.
+ *
+ * `jsApi` is opt-in because it only exists to let `youtube-player.tsx` attach
+ * the IFrame API for progress tracking. A public page with no account has no
+ * progress to record, so it has no reason to ask for the extra surface.
+ */
+export function youtubeEmbedUrl(id: string, { jsApi = false } = {}): string {
+  const p = new URLSearchParams({
+    // Keep end-screen suggestions to this channel rather than the whole of
+    // YouTube, so a lesson doesn't end by recommending someone else's course.
+    rel: "0",
+    modestbranding: "1",
+    // iOS plays inline instead of hijacking the screen with its own player.
+    playsinline: "1",
+  });
+  if (jsApi) {
+    p.set("enablejsapi", "1");
+    p.set("origin", env.APP_URL);
+  }
+  return `${EMBED_HOST}/${id}?${p.toString()}`;
+}
+
 export const youtubeVideo: VideoProvider = {
   name: "youtube",
   playback: "youtube",
@@ -77,18 +104,8 @@ export const youtubeVideo: VideoProvider = {
   async getStreamUrl(asset: VideoAssetRef) {
     const id = asset.providerAssetId;
     if (!id) throw new Error("YouTube video asset has no providerAssetId");
-    const p = new URLSearchParams({
-      // Keep end-screen suggestions to this channel rather than the whole of
-      // YouTube, so a lesson doesn't end by recommending someone else's course.
-      rel: "0",
-      modestbranding: "1",
-      // iOS plays inline instead of hijacking the screen with its own player.
-      playsinline: "1",
-      // Required for the IFrame API, which is how progress tracking survives.
-      enablejsapi: "1",
-      origin: env.APP_URL,
-    });
-    return `${EMBED_HOST}/${id}?${p.toString()}`;
+    // jsApi: lesson playback tracks progress through the IFrame API.
+    return youtubeEmbedUrl(id, { jsApi: true });
   },
 
   /** Nothing to transcode or wait for — a pasted id is immediately playable. */

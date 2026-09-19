@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LESSON_TYPE_META } from "@/components/lesson-type";
 
-export const metadata = { title: "Free preview — Cohort Portal" };
+export const metadata = { title: "Free preview" };
 export const dynamic = "force-dynamic";
 
 export default async function FreePreviewPage({
@@ -58,7 +58,31 @@ export default async function FreePreviewPage({
 
         {item.type === "VIDEO" &&
           (videoUrl ? (
-            <VideoPlayer src={videoUrl} watermark={watermark} lessonItemId={item.id} initialPosition={0} />
+            /*
+             * Branch on the provider's playback KIND, exactly as the lesson
+             * page does. This page previously rendered <VideoPlayer> whatever
+             * the provider was, so under VIDEO_PROVIDER=youtube it fed a
+             * YouTube *embed URL* into a <video src> and drew nothing at all —
+             * marking a lesson "free preview" produced a blank player.
+             *
+             * Unlike the lesson page this passes no lessonItemId: a preview is
+             * public, so there is no signed-in student whose progress could be
+             * recorded, and beaconing anonymous progress would write rows that
+             * belong to nobody.
+             */
+            videoProvider.playback === "youtube" ? (
+              <div className="overflow-hidden rounded-2xl border-brutal border-ink bg-ink">
+                <iframe
+                  src={videoUrl}
+                  title={item.title}
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  className="block aspect-video w-full border-0"
+                />
+              </div>
+            ) : (
+              <VideoPlayer src={videoUrl} watermark={watermark} lessonItemId={item.id} initialPosition={0} />
+            )
           ) : (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">

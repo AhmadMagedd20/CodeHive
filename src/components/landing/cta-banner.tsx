@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { LandingButton } from "./cta-button";
 import { Reveal } from "./motion";
 import { Glow } from "./backdrop";
@@ -31,9 +32,9 @@ export function CtaBanner() {
           </div>
           <p className="mt-4 text-sm text-white/60">
             Under a minute · free account ·{" "}
-            <a href="#try-a-lesson" className="font-medium text-white/85 underline-offset-4 hover:underline">
+            <Link href="/free-lesson" className="font-medium text-white/85 underline-offset-4 hover:underline">
               or watch a free lesson first
-            </a>
+            </Link>
           </p>
         </Reveal>
       </div>

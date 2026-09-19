@@ -8,7 +8,7 @@ import { PublicHeader } from "@/components/public-header";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
-  title: "Courses — Cohort Portal",
+  title: "Courses",
   description: "Browse and buy Megz's courses — VOD, solved LeetCode, live lab walk-throughs.",
 };
 /**
