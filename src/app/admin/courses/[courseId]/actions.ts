@@ -5,6 +5,8 @@ import type { LessonType, University } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireInstructor } from "@/lib/auth/current-user";
 import { parsePriceToCents, deriveSalePricing } from "@/lib/money";
+import { videoProvider } from "@/lib/video";
+import { parseYouTubeId } from "@/lib/video/youtube";
 
 /**
  * Course-structure builder actions. Every action is scoped to the signed-in
@@ -273,4 +275,54 @@ export async function moveItem(formData: FormData) {
     prisma.lessonItem.update({ where: { id: swap.id }, data: { orderIndex: item.orderIndex } }),
   ]);
   revalidate(item.module.courseId);
+}
+
+/**
+ * Attach a YouTube video to a lesson by link.
+ *
+ * The YouTube provider has no upload API on purpose — the instructor uploads
+ * to their own channel as Unlisted and pastes the link here. We store only the
+ * 11-character id, and the link is parsed server-side so a malformed paste
+ * can't be written to the database.
+ *
+ * Clearing the field detaches the video, which is how you fix a wrong paste.
+ */
+export async function setLessonVideoLink(formData: FormData) {
+  const item = await ownedItem(String(formData.get("itemId")));
+  if (item.type !== "VIDEO") return { error: "That lesson isn't a video." };
+
+  const raw = String(formData.get("url") ?? "").trim();
+
+  if (!raw) {
+    await prisma.video.deleteMany({ where: { lessonItemId: item.id } });
+    revalidate(item.module.courseId);
+    return { ok: true, cleared: true };
+  }
+
+  const id = parseYouTubeId(raw);
+  if (!id) {
+    return {
+      error:
+        "That doesn't look like a YouTube link. Paste the full address from the browser, e.g. https://www.youtube.com/watch?v=...",
+    };
+  }
+
+  await prisma.video.upsert({
+    where: { lessonItemId: item.id },
+    create: {
+      lessonItemId: item.id,
+      provider: videoProvider.name,
+      providerAssetId: id,
+      status: "READY",
+      originalFilename: null,
+    },
+    update: {
+      provider: videoProvider.name,
+      providerAssetId: id,
+      storageKey: null,
+      status: "READY",
+    },
+  });
+  revalidate(item.module.courseId);
+  return { ok: true, videoId: id };
 }

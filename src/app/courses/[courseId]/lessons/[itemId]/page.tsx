@@ -12,6 +12,7 @@ import { AppShell } from "@/components/app-shell";
 import { Markdown } from "@/components/markdown";
 import { VideoPlayer } from "@/components/video-player";
 import { BunnyPlayer } from "@/components/bunny-player";
+import { YouTubePlayer } from "@/components/youtube-player";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { CompleteButton } from "@/components/complete-button";
 import { QuizPanel } from "@/components/quiz-panel";
@@ -289,7 +290,14 @@ export default async function LessonPage({
             (videoUrl ? (
               // Branch on the provider's playback KIND, not its name, so a
               // future provider needs no change here.
-              videoProvider.playback === "iframe" ? (
+              videoProvider.playback === "youtube" ? (
+                <YouTubePlayer
+                  src={videoUrl}
+                  lessonItemId={item.id}
+                  initialPosition={progress?.lastPositionSeconds ?? 0}
+                  title={item.title}
+                />
+              ) : videoProvider.playback === "bunny" ? (
                 <BunnyPlayer
                   src={videoUrl}
                   lessonItemId={item.id}

@@ -54,8 +54,12 @@ export interface DirectUploadTicket {
   expiresAt: number;
 }
 
-/** How playback is delivered, so the lesson page can pick the right component. */
-export type PlaybackKind = "file" | "iframe";
+/**
+ * How playback is delivered, so the lesson page can pick the right component.
+ * `file` -> <video>, the rest are provider-specific embeds with their own
+ * progress-tracking bridge.
+ */
+export type PlaybackKind = "file" | "bunny" | "youtube";
 
 export interface VideoProvider {
   readonly name: string;

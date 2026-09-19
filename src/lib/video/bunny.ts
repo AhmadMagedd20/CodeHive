@@ -85,7 +85,7 @@ async function bunnyFetch(path: string, init: RequestInit = {}) {
 
 export const bunnyVideo: VideoProvider = {
   name: "bunny",
-  playback: "iframe",
+  playback: "bunny",
 
   async upload(_input: UploadVideoInput): Promise<UploadedVideo> {
     throw new Error(

@@ -973,6 +973,51 @@ Nothing else in `src/` touches `fs`, spawns workers, or holds long-lived state.
 PDFs, payment screenshots and announcement images — all small — so it is no longer a practical
 concern.
 
+## 5q. Video — YouTube (unlisted)
+
+`VIDEO_PROVIDER=youtube` is the shipping choice. `bunny` and `local` remain implemented and
+selectable; the lesson page branches on `videoProvider.playback` (`file` | `youtube` | `bunny`),
+never on the provider name.
+
+### There is no upload API, deliberately
+
+The instructor uploads to their own YouTube channel as **Unlisted**, then pastes the link into the
+lesson in the course builder. `setLessonVideoLink` parses it **server-side** and stores only the
+11-character id in `Video.providerAssetId`. A malformed paste is rejected rather than saved;
+clearing the field detaches the video.
+
+`youtubeVideo.upload()` throws on purpose — there is nothing to upload through.
+
+`parseYouTubeId` accepts every real-world form: `watch?v=`, `youtu.be/`, `/embed/`, `/shorts/`,
+`/live/`, extra query params, a bare id, and surrounding whitespace. 15/15 cases verified,
+including rejection of non-YouTube URLs and ids of the wrong length.
+
+### The trade, stated plainly
+
+**An unlisted video is viewable by anyone holding the link, forever.** No token, no expiry, no
+revocation short of deleting the video. Chosen deliberately (instructor's decision, 2026-09-19):
+a shared lecture is treated as marketing rather than loss, and the same reasoning already removed
+the per-student watermark.
+
+If that stops being true, `bunny.ts` implements the identical interface with expiring signed
+embeds — switching is a `VIDEO_PROVIDER` change plus re-hosting the videos.
+
+### Playback
+
+Embedded through `youtube-nocookie.com` with `rel=0` (end-screen suggestions stay on the
+instructor's own channel), `modestbranding`, `playsinline` for iOS, and `enablejsapi=1`.
+
+Progress tracking survives: `components/youtube-player.tsx` attaches YouTube's **IFrame API** to
+the existing iframe. The API has no `timeupdate` event, so position is sampled once a second while
+playing and reported to `/api/progress` at most every 15s, plus on pause, tab-hide and `ended` —
+matching the old `<video>` contract exactly. Completion, dashboard percentages and assignment
+gating are unaffected.
+
+### Cost
+
+£0. No storage bill, no bandwidth bill, no per-file size cap, and YouTube's adaptive bitrate
+handles poor mobile connections better than a self-hosted player would.
+
 ## 6. Decisions Log
 
 | Date       | Decision / Change                                                                 | Reason |

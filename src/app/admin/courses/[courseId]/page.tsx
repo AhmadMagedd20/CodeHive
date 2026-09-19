@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubmitButton } from "@/components/submit-button";
 import { CourseBuilder, type ModuleDTO } from "./builder";
+import { videoProvider } from "@/lib/video";
 import { PricingFields } from "./pricing-fields";
 import { updateCourseSettings } from "./actions";
 
@@ -179,7 +180,7 @@ export default async function CourseBuilderPage({ params }: { params: { courseId
       </Card>
 
       <h2 className="mb-3 font-display text-card-title">Outline</h2>
-      <CourseBuilder courseId={course.id} modules={modules} />
+      <CourseBuilder courseId={course.id} modules={modules} videoMode={videoProvider.playback} />
     </div>
   );
 }

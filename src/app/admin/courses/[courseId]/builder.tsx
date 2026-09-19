@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -27,6 +27,14 @@ import { SubmitButton } from "@/components/submit-button";
 import { LESSON_TYPE_META, LESSON_TYPE_ORDER } from "@/components/lesson-type";
 import { formatPrice } from "@/lib/money";
 import { ContentUpload } from "./content-upload";
+import type { PlaybackKind } from "@/lib/video/types";
+
+/**
+ * How video gets attached, decided by VIDEO_PROVIDER on the server. Passed via
+ * context rather than drilled through ModuleCard -> ItemRow, since it is a
+ * single app-wide constant that nothing in between cares about.
+ */
+const VideoModeContext = createContext<PlaybackKind>("file");
 import {
   createModule,
   updateModule,
@@ -153,6 +161,7 @@ function IconForm({
 }
 
 function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; isLast: boolean }) {
+  const videoMode = useContext(VideoModeContext);
   const [editing, setEditing] = useState(false);
   const [editingBody, setEditingBody] = useState(false);
   const { Icon, label } = LESSON_TYPE_META[item.type];
@@ -287,7 +296,12 @@ function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; i
 
       {(item.type === "VIDEO" || item.type === "DOCUMENT") && (
         <div className="border-t px-3 py-2">
-          <ContentUpload itemId={item.id} type={item.type} hasContent={item.hasContent} />
+          <ContentUpload
+            itemId={item.id}
+            type={item.type}
+            hasContent={item.hasContent}
+            videoMode={videoMode}
+          />
         </div>
       )}
 
@@ -490,10 +504,19 @@ function ModuleCard({
   );
 }
 
-export function CourseBuilder({ courseId, modules }: { courseId: string; modules: ModuleDTO[] }) {
+export function CourseBuilder({
+  courseId,
+  modules,
+  videoMode,
+}: {
+  courseId: string;
+  modules: ModuleDTO[];
+  videoMode: PlaybackKind;
+}) {
   const [addingModule, setAddingModule] = useState(false);
 
   return (
+    <VideoModeContext.Provider value={videoMode}>
     <div className="space-y-4">
       {modules.map((m, i) => (
         <ModuleCard
@@ -522,6 +545,7 @@ export function CourseBuilder({ courseId, modules }: { courseId: string; modules
           <Plus className="h-4 w-4" /> Add module
         </Button>
       )}
-    </div>
+      </div>
+    </VideoModeContext.Provider>
   );
 }

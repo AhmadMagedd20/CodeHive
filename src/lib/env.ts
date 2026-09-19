@@ -89,7 +89,7 @@ const schema = z.object({
   // --- Phase 2: content, media, scheduling ---------------------------------
   // `local` = dev only (disk + <video>). `bunny` = production (browser-direct
   // TUS upload, iframe playback). See lib/video/bunny.ts.
-  VIDEO_PROVIDER: z.enum(["local", "bunny"]).default("local"),
+  VIDEO_PROVIDER: z.enum(["local", "youtube", "bunny"]).default("local"),
   BUNNY_STREAM_LIBRARY_ID: z.string().optional(),
   BUNNY_STREAM_API_KEY: z.string().optional(),
   /** Enables expiring embed links. Optional: without it, embeds are unsigned. */

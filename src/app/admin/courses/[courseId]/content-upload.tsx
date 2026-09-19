@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Upload, CheckCircle2, AlertTriangle, RotateCcw } from "lucide-react";
+import { Loader2, Upload, CheckCircle2, AlertTriangle, RotateCcw, Link as LinkIcon } from "lucide-react";
 import type { LessonType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { PlaybackKind } from "@/lib/video/types";
+import { setLessonVideoLink } from "./actions";
 
 const ACCEPT: Partial<Record<LessonType, string>> = {
   VIDEO: "video/*",
@@ -31,14 +34,78 @@ type Phase =
  * If the active provider has no direct upload (i.e. `local`, in development),
  * this transparently falls back to the old server-side route.
  */
+/**
+ * Attach a YouTube video by link.
+ *
+ * The YouTube provider has no upload API by design — the instructor uploads to
+ * their own channel as Unlisted and pastes the address here. The link is parsed
+ * server-side, so a malformed paste is rejected rather than stored.
+ */
+function YouTubeLink({ itemId, hasContent }: { itemId: string; hasContent: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
+
+  async function save(formData: FormData) {
+    setBusy(true);
+    setMsg(undefined);
+    try {
+      const res = await setLessonVideoLink(formData);
+      if (res?.error) setMsg({ ok: false, text: res.error });
+      else {
+        setMsg({ ok: true, text: res?.cleared ? "Video removed." : "Video attached." });
+        router.refresh();
+      }
+    } catch {
+      setMsg({ ok: false, text: "Could not save. Try again." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form action={save} className="flex flex-col gap-2">
+      <input type="hidden" name="itemId" value={itemId} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          name="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          className="h-9 max-w-md flex-1"
+          aria-label="YouTube link"
+        />
+        <Button type="submit" size="sm" variant="outline" disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
+          {hasContent ? "Replace" : "Attach"}
+        </Button>
+        {hasContent && !busy && (
+          <span className="flex items-center gap-1 text-xs text-success">
+            <CheckCircle2 className="h-3.5 w-3.5" /> video attached
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-ink/50">
+        Upload to your YouTube channel as <strong>Unlisted</strong>, then paste the link.
+        Leave empty and press Replace to detach.
+      </p>
+      {msg && (
+        <span className={msg.ok ? "text-xs text-success" : "text-xs text-destructive"}>
+          {msg.text}
+        </span>
+      )}
+    </form>
+  );
+}
+
 export function ContentUpload({
   itemId,
   type,
   hasContent,
+  videoMode,
 }: {
   itemId: string;
   type: LessonType;
   hasContent: boolean;
+  videoMode: PlaybackKind;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -163,6 +230,11 @@ export function ContentUpload({
     } finally {
       if (inputRef.current) inputRef.current.value = "";
     }
+  }
+
+  // YouTube attaches by link, not by upload.
+  if (type === "VIDEO" && videoMode === "youtube") {
+    return <YouTubeLink itemId={itemId} hasContent={hasContent} />;
   }
 
   const label = type === "VIDEO" ? "video" : "document";
