@@ -164,6 +164,10 @@ function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; i
   const videoMode = useContext(VideoModeContext);
   const [editing, setEditing] = useState(false);
   const [editingBody, setEditingBody] = useState(false);
+  // Confirmation for the reading editor. Without it a successful save is
+  // indistinguishable from a broken button: the textarea keeps the same text
+  // and nothing else on the row changes.
+  const [bodySaved, setBodySaved] = useState<string>();
   const { Icon, label } = LESSON_TYPE_META[item.type];
 
   return (
@@ -264,7 +268,18 @@ function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; i
       {item.type === "RICH_TEXT" && (
         <div className="border-t px-3 py-2">
           {editingBody ? (
-            <form action={updateItemBody} className="space-y-2">
+            <form
+              action={async (fd) => {
+                setBodySaved(undefined);
+                const res = await updateItemBody(fd);
+                setBodySaved(
+                  res?.ok
+                    ? `Saved — ${res.length.toLocaleString()} characters.`
+                    : (res?.error ?? "Could not save. Try again."),
+                );
+              }}
+              className="space-y-2"
+            >
               <input type="hidden" name="itemId" value={item.id} />
               <Textarea
                 name="body"
@@ -273,13 +288,16 @@ function ItemRow({ item, isFirst, isLast }: { item: ItemDTO; isFirst: boolean; i
                 placeholder="Write lesson content in Markdown. Fenced ``` code blocks are supported."
                 className="font-mono text-sm"
               />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <SubmitButton size="sm" pendingText="Saving…">
                   <Save className="h-4 w-4" /> Save content
                 </SubmitButton>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditingBody(false)}>
                   Close
                 </Button>
+                {bodySaved && (
+                  <span className="text-xs font-medium text-mint-strong">{bodySaved}</span>
+                )}
               </div>
             </form>
           ) : (

@@ -24,14 +24,36 @@ export function Markdown({ content, className }: { content: string; className?: 
         "[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground",
         "[&_:not(pre)>code]:rounded [&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-sm",
         "[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-ink [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-white [&_pre_code]:font-mono",
-        "[&_img]:rounded-lg [&_table]:w-full [&_th]:border-b [&_th]:py-1 [&_th]:text-left [&_td]:border-b [&_td]:py-1",
+        "[&_img]:rounded-lg",
+        // `min-w-full` rather than `w-full`: inside the scroll container below,
+        // a wide table needs to be allowed to exceed the container, not squeeze
+        // into it. Lecture notes routinely carry 7- and 8-column trace tables
+        // that are unreadable when crushed to phone width.
+        "[&_table]:min-w-full [&_table]:text-sm [&_table]:border-collapse",
+        "[&_th]:whitespace-nowrap [&_th]:border-b [&_th]:px-3 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold",
+        "[&_td]:border-b [&_td]:px-3 [&_td]:py-1.5 [&_td]:align-top",
+        "[&_hr]:my-8 [&_hr]:border-border",
         className,
       )}
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
-        components={{ pre: Pre }}
+        components={{
+          pre: Pre,
+          /*
+           * Tables get their own scroll container so a wide one scrolls
+           * sideways instead of pushing the whole page wide. Without this a
+           * single 8-column table makes every other paragraph on the lesson
+           * scroll horizontally too, which is the usual way long-form notes
+           * break on a phone.
+           */
+          table: ({ node: _node, ...props }) => (
+            <div className="-mx-1 overflow-x-auto px-1">
+              <table {...props} />
+            </div>
+          ),
+        }}
       >
         {content}
       </ReactMarkdown>

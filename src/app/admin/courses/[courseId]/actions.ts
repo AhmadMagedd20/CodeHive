@@ -237,12 +237,22 @@ export async function updateItem(formData: FormData) {
   revalidate(item.module.courseId);
 }
 
+/**
+ * Save a reading's markdown.
+ *
+ * Returns a result rather than void so the editor can confirm the save. It
+ * previously returned nothing and the form rendered no feedback at all: the
+ * textarea stayed open showing the same text, so a successful save looked
+ * exactly like a dead button — the content was in the database and the
+ * instructor had no way to know.
+ */
 export async function updateItemBody(formData: FormData) {
   const item = await ownedItem(String(formData.get("itemId")));
-  if (item.type !== "RICH_TEXT") return;
+  if (item.type !== "RICH_TEXT") return { error: "That item isn't a reading." };
   const body = String(formData.get("body") ?? "");
   await prisma.lessonItem.update({ where: { id: item.id }, data: { body } });
   revalidate(item.module.courseId);
+  return { ok: true, length: body.length };
 }
 
 export async function deleteItem(formData: FormData) {
