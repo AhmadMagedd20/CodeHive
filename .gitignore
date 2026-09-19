@@ -21,10 +21,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# env files (keep .env.example tracked)
+# env files. Catch-all, because this repo is public: any .env variant is
+# ignored unless it is explicitly an .example template.
 .env
-.env*.local
-.env.production
+.env*
+!.env*.example
 
 # testing
 /coverage
