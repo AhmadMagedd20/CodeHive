@@ -168,9 +168,22 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
           </Reveal>
 
           <Reveal delay={0.28}>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              <LandingButton href="/register">Create Your Account</LandingButton>
-              <LandingButton href="/free-lesson" variant="secondary">
+            {/*
+             * `flex-wrap` + `whitespace-nowrap` on each button, together.
+             *
+             * With three buttons the row no longer fits the hero column, and a
+             * non-wrapping flex row shrinks its items instead: the labels broke
+             * onto two lines and the pills looked squashed. Stopping the text
+             * wrapping fixes the width too — a flex item will not shrink below
+             * its min-content size, which for a nowrap label is the full label
+             * width. The row then breaks onto a second line when it must, and
+             * every button keeps its natural size.
+             */}
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
+              <LandingButton href="/register" className="whitespace-nowrap">
+                Create Your Account
+              </LandingButton>
+              <LandingButton href="/free-lesson" variant="secondary" className="whitespace-nowrap">
                 <Play className="h-4 w-4 fill-current" /> Watch a Free Lesson
               </LandingButton>
               {/*
