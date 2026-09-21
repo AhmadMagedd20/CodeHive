@@ -44,7 +44,7 @@ function FloatChip({
 function HeroVisual({ heroVideo }: { heroVideo: HeroVideoProps }) {
   const reduce = useReducedMotion();
   return (
-    <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+    <div className="relative mx-auto w-full max-w-md xl:max-w-none">
       {/* ghost display type behind the cluster */}
       <span
         aria-hidden
@@ -133,11 +133,30 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
       <Glow float className="-right-20 top-40 h-80 w-80 bg-lilac/40" />
       <Glow float className="left-1/3 top-1/2 h-72 w-72 bg-sky/30" />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+      {/*
+       * Two changes here, both so the three CTA pills sit on ONE line at full
+       * size — the row needs 632px and will not shrink below it.
+       *
+       * 1. Text column widened 1.05fr -> 1.4fr. Measured: 1.05fr gave 570px,
+       *    and 1.3fr came up 3px short at 629px, so this is deliberately
+       *    1.4fr (~649px) rather than a value tuned to the exact pixel that a
+       *    different font-loading state could undo.
+       *
+       * 2. The split moved from `lg` (1024px) to `xl` (1280px). At 1024 the
+       *    grid left only 546px for the text column, so the row still wrapped;
+       *    forcing it to fit there would have squeezed the video to ~300px.
+       *    Below 1280 the hero stacks instead, and the button row gets the
+       *    full content width. From 1280 up the container is always its
+       *    max-w-6xl 1152px, so the column is a stable 649px.
+       *
+       * The visual column goes 542px -> ~463px; the player is aspect-video so
+       * it absorbs that with no change of its own.
+       */}
+      <div className="relative mx-auto grid max-w-6xl items-center gap-14 xl:grid-cols-[1.4fr_1fr] xl:gap-10">
         {/* copy */}
-        <div className="text-center lg:text-left">
+        <div className="text-center xl:text-left">
           <Reveal>
-            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+            <div className="flex flex-wrap items-center justify-center gap-2 xl:justify-start">
               {["MET, GUC '25", "4 years teaching", "200+ students"].map((chip) => (
                 <span
                   key={chip}
@@ -160,7 +179,7 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
           />
 
           <Reveal delay={0.15}>
-            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink/65 sm:text-lg lg:mx-0">
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink/65 sm:text-lg xl:mx-0">
               Megz&apos;s VOD lectures, solved problems, and live lab walkthroughs — for GUC &amp;
               GIU students. Rewatch until it clicks, get real feedback on your work, and stop
               meeting the material for the first time the night before.
@@ -179,7 +198,7 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
              * width. The row then breaks onto a second line when it must, and
              * every button keeps its natural size.
              */}
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center xl:justify-start">
               <LandingButton href="/register" className="whitespace-nowrap">
                 Create Your Account
               </LandingButton>
@@ -214,7 +233,10 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
                     "transition-transform duration-200 motion-safe:hover:scale-[1.03] motion-safe:active:scale-95",
                   ].join(" ")}
                 >
-                  <WhatsAppIcon className="h-4 w-4" /> Chat on WhatsApp
+                  {/* Just "WhatsApp": the logo beside it already says "chat",
+                      and the shorter label is what lets all three pills share
+                      one line without shrinking any of them. */}
+                  <WhatsAppIcon className="h-4 w-4" /> WhatsApp
                 </a>
               )}
             </div>
