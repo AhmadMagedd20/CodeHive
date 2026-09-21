@@ -13,7 +13,7 @@ const STEPS: { icon: LucideIcon; num: string; title: string; body: string }[] = 
     icon: UserPlus,
     num: "01",
     title: "Create your account",
-    body: "Username, email, password — under a minute, free. Taking classes with Megz in person? Drop in the code you were given.",
+    body: "Username, email, password — under a minute, free. Taking classes with Megz in person? Drop in the code you were given and the whole portal is free with your seat.",
   },
   {
     icon: MailCheck,

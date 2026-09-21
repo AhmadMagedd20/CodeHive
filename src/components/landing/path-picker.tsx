@@ -35,11 +35,12 @@ export function PathPicker() {
                 I take classes with Megz in person
               </h3>
               <p className="mt-3 text-[15px] leading-relaxed text-ink/55">
-                Your seat is already paid for. Register with the code Megz gave you, confirm your
-                email, and Megz releases your lectures as you attend — <span className="font-medium text-ink">no payment on the site</span>.
+                The portal is <span className="font-medium text-ink">free with your seat</span>.
+                Register with the code Megz gave you, confirm your email, and your lectures are
+                released as you attend — nothing to pay on the site.
               </p>
               <ul className="mt-5 space-y-2 text-sm text-ink/80">
-                {["Register with your code (under a minute)", "Confirm your email — you're in", "Your lectures unlock as you attend"].map((s) => (
+                {["Register with your code (under a minute)", "Confirm your email — you're in", "Your lectures unlock as you attend", "Free — the portal is included with your seat"].map((s) => (
                   <li key={s} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-success-strong" /> {s}
                   </li>

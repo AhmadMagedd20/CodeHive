@@ -7,6 +7,7 @@ import { FeatureShowcase } from "@/components/landing/feature-showcase";
 import { Proof } from "@/components/landing/proof";
 import { PathPicker } from "@/components/landing/path-picker";
 import { HowItWorks } from "@/components/landing/how-it-works";
+import { InPersonClasses } from "@/components/landing/in-person";
 import { CtaBanner } from "@/components/landing/cta-banner";
 import { Footer } from "@/components/landing/footer";
 import { getHeroVideo } from "@/lib/hero-video";
@@ -53,6 +54,7 @@ export default async function Home() {
         <Proof />
         <PathPicker />
         <HowItWorks />
+        <InPersonClasses />
         <CtaBanner />
       </main>
       <Footer />

@@ -6,6 +6,8 @@ import { LandingButton } from "./cta-button";
 import { WordsHeading, Reveal } from "./motion";
 import { DotGrid, Glow } from "./backdrop";
 import { HeroPlayer } from "./hero-player";
+import { WhatsAppIcon } from "@/components/whatsapp-icon";
+import { whatsappLink, WHATSAPP_MESSAGES } from "@/lib/whatsapp";
 
 /** Public hero preview video, when one has been uploaded in admin settings. */
 export type HeroVideoProps = { src: string; poster: string | null } | null;
@@ -122,6 +124,8 @@ function HeroVisual({ heroVideo }: { heroVideo: HeroVideoProps }) {
 }
 
 export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
+  // null when NEXT_PUBLIC_WHATSAPP_NUMBER is unset — the button then isn't rendered.
+  const whatsappHref = whatsappLink(WHATSAPP_MESSAGES.general);
   return (
     <section className="relative overflow-hidden px-4 pb-24 pt-32 sm:px-6 sm:pt-40">
       <DotGrid className="opacity-50 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
@@ -134,7 +138,7 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
         <div className="text-center lg:text-left">
           <Reveal>
             <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-              {["MET, GUC '22", "4 years teaching", "200+ students"].map((chip) => (
+              {["MET, GUC '25", "4 years teaching", "200+ students"].map((chip) => (
                 <span
                   key={chip}
                   className="inline-flex items-center gap-1.5 rounded-full bg-sunny px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink"
@@ -169,6 +173,37 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
               <LandingButton href="/free-lesson" variant="secondary">
                 <Play className="h-4 w-4 fill-current" /> Watch a Free Lesson
               </LandingButton>
+              {/*
+               * Not a LandingButton: this one keeps WhatsApp's own green so it
+               * reads instantly as "this opens WhatsApp", which is the whole
+               * point of putting it here. It still carries the 2px ink border
+               * and pill shape, so it sits in the row as a sibling rather than
+               * a foreign object. Renders nothing when the number is unset.
+               */}
+              {whatsappHref && (
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Chat with Megz on WhatsApp"
+                  className={[
+                    // Auto width, matching the two LandingButtons beside it —
+                    // they are auto-width and centred at every breakpoint, so a
+                    // full-width third button would break the row.
+                    // h-12 px-7 text-base mirrors LandingButton's "lg" size
+                    // exactly, so all three pills are the same height.
+                    // whitespace-nowrap: the label wrapped to two lines in the
+                    // narrow hero column and overflowed the fixed-height pill.
+                    "inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap px-7 text-base",
+                    "rounded-full border-brutal border-ink bg-[#25D366]",
+                    "font-semibold text-white shadow-soft",
+                    "outline-none focus-visible:ring-4 focus-visible:ring-ink/25",
+                    "transition-transform duration-200 motion-safe:hover:scale-[1.03] motion-safe:active:scale-95",
+                  ].join(" ")}
+                >
+                  <WhatsAppIcon className="h-4 w-4" /> Chat on WhatsApp
+                </a>
+              )}
             </div>
             <p className="mt-3 text-sm text-ink/55">
               Takes under a minute — and the free lesson needs no account at all.
