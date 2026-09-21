@@ -44,7 +44,7 @@ function FloatChip({
 function HeroVisual({ heroVideo }: { heroVideo: HeroVideoProps }) {
   const reduce = useReducedMotion();
   return (
-    <div className="relative mx-auto w-full max-w-md xl:max-w-none">
+    <div className="relative mx-auto w-full max-w-md lg:max-w-none">
       {/* ghost display type behind the cluster */}
       <span
         aria-hidden
@@ -142,21 +142,24 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
        *    1.4fr (~649px) rather than a value tuned to the exact pixel that a
        *    different font-loading state could undo.
        *
-       * 2. The split moved from `lg` (1024px) to `xl` (1280px). At 1024 the
-       *    grid left only 546px for the text column, so the row still wrapped;
-       *    forcing it to fit there would have squeezed the video to ~300px.
-       *    Below 1280 the hero stacks instead, and the button row gets the
-       *    full content width. From 1280 up the container is always its
-       *    max-w-6xl 1152px, so the column is a stable 649px.
+       * 2. The ratio is per-breakpoint, because one value cannot serve both
+       *    ends. At 1024 the container is only 976px wide, so 1.4fr left the
+       *    text column at 546px and the row still wrapped; 2.3fr gets it to
+       *    ~652px. Applying 2.3fr everywhere would then waste a big screen —
+       *    at 1280+ it would leave the player at ~337px for no reason — so
+       *    `xl` drops back to 1.4fr once the container has hit its max-w-6xl
+       *    1152px and the text column is a stable 649px.
        *
-       * The visual column goes 542px -> ~463px; the player is aspect-video so
-       * it absorbs that with no change of its own.
+       * The player pays for this between 1024 and 1279 (~284px wide there,
+       * ~463px from 1280 up). Deliberate: the instructor chose a smaller
+       * player over the hero ever stacking. It is aspect-video, so it simply
+       * scales — no change of its own.
        */}
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 xl:grid-cols-[1.4fr_1fr] xl:gap-10">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[2.3fr_1fr] lg:gap-10 xl:grid-cols-[1.4fr_1fr]">
         {/* copy */}
-        <div className="text-center xl:text-left">
+        <div className="text-center lg:text-left">
           <Reveal>
-            <div className="flex flex-wrap items-center justify-center gap-2 xl:justify-start">
+            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
               {["MET, GUC '25", "4 years teaching", "200+ students"].map((chip) => (
                 <span
                   key={chip}
@@ -179,7 +182,7 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
           />
 
           <Reveal delay={0.15}>
-            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink/65 sm:text-lg xl:mx-0">
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink/65 sm:text-lg lg:mx-0">
               Megz&apos;s VOD lectures, solved problems, and live lab walkthroughs — for GUC &amp;
               GIU students. Rewatch until it clicks, get real feedback on your work, and stop
               meeting the material for the first time the night before.
@@ -198,7 +201,7 @@ export function Hero({ heroVideo = null }: { heroVideo?: HeroVideoProps }) {
              * width. The row then breaks onto a second line when it must, and
              * every button keeps its natural size.
              */}
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center xl:justify-start">
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
               <LandingButton href="/register" className="whitespace-nowrap">
                 Create Your Account
               </LandingButton>
